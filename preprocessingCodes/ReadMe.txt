@@ -1,0 +1,1 @@
+This folder contains programs that were used to segment the data and to find bad trials and electrodes.

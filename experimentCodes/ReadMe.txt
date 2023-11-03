@@ -1,0 +1,1 @@
+This folder contains programs that were used to display the stimuli using the experiment.
