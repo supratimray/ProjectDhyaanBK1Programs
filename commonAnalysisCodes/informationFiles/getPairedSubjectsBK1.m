@@ -1,6 +1,6 @@
 % 1st column: Meditator, 2nd Column: Control
 
-function pairedSubjectNameList = getMatchedSubjectsBK1
+function pairedSubjectNameList = getPairedSubjectsBK1
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Males
@@ -39,8 +39,8 @@ pairedSubjectNameList{18,1} = '046ME'; pairedSubjectNameList{18,2} = '085BM'; % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Female 20-29 
-pairedSubjectNameList{19,1} = '031BK'; pairedSubjectNameList{19,2} = '081SN'; % A-24, C-23
-pairedSubjectNameList{20,1} = '056PR'; pairedSubjectNameList{20,2} = '073SK'; % A-27, C-26: Other option: 086AB has moe difference in education level
+pairedSubjectNameList{19,1} = '031BK'; pairedSubjectNameList{19,2} = '073SK'; % A-24, C-26; % '081SN' is a better match age wise (24 years) but has too many bad electrodes and hence not used
+pairedSubjectNameList{20,1} = '056PR'; pairedSubjectNameList{20,2} = '086AB'; % A-27, C-28: Other option: 073SK is used above.
 
 % Female 30-39
 pairedSubjectNameList{21,1} = '052PR'; pairedSubjectNameList{21,2} = '087KR'; % A-31,  C-31 % Other option: 082MS has larger difference in MC phase
