@@ -13,7 +13,7 @@ disp(['Control: ' num2str(length(find(controlPos))) '(M=' num2str(length(find(co
 
 %%%%%%%%%%%%%%%%%%%%%% Find Matched subjects %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Method 1 - For each meditator, find controls of same gender and age within +- ageLim years
-ageLim = 1;
+ageLim = 2;
 
 % Create meditator list sorted by gender and age
 maleMeditatorPos = find(meditatorPos & malePos);
@@ -26,6 +26,8 @@ femaleMeditatorAge = ageList(femaleMeditatorPos);
 [~,order] = sort(femaleMeditatorAge);
 meditatorList = cat(1,meditatorList,subjectNameList(femaleMeditatorPos(order)));
 
+controlList = [];
+noControlPos = [];
 for i=1:length(meditatorList)
     subjectName = meditatorList{i};
     pos = find(strcmp(subjectName,subjectNameList));
@@ -35,11 +37,23 @@ for i=1:length(meditatorList)
     genderMatchPos = strcmp(gender,genderList);
     allPos = controlPos & ageMatchPos & genderMatchPos;
     controls = subjectNameList(allPos);
-    
+    controlList = cat(1,controlList,controls);
     controlStr = '';
     for j=1:length(controls)
         cPos = find(strcmp(controls{j},subjectNameList));
         controlStr = cat(2,controlStr,[' ' controls{j} ' (' num2str(ageList(cPos)) ',' genderList{cPos} ',' num2str(educationList(cPos)) ',' num2str(mcList(cPos))  ')']);
     end
     disp([num2str(i) ': ' subjectName ' (' num2str(age) ',' gender{1} ',' num2str(educationList(pos)) ',' num2str(mcList(pos))  '). Control(s): ' controlStr]);
+
+    if isempty(controls)
+        noControlPos = cat(2,noControlPos,i);
+    end
 end
+
+meditatorList(noControlPos)=[]; % Remove meditators for whom controls are not available
+controlList = unique(controlList);
+allSubjectList = cat(1,meditatorList,controlList);
+
+% Make sure to run this code in the informationFiles folder. To create the
+% .mat file, uncomment the next line.
+% save BK1AllSubjectList.mat allSubjectList meditatorList controlList

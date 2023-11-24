@@ -1,5 +1,5 @@
-% displayBadTrialsAcrossSubjectsBK1
-% this script displays bad electrodes across subjects
+% runDisplayBadElecsAcrossSubjectsBK1
+% This script displays bad electrodes across subjects
 % Displays for the paired subject if the 'dispForPairedSubject' flag is 'ON'; default: all the subjects
 % Can sort the subjects according to date of data collection if 'sortByDate' flag is 'ON';
 % default: displays for the Meditators followed by Controls
@@ -20,7 +20,7 @@ numElecs = 64;
 protocolName = 'G1';
 gridType = 'EEG';
 capType = 'actiCap64_UOL';
-folderSourceString = 'D:\Projects\ProjectDhyaan\BK1';
+folderSourceString = 'N:\Projects\ProjectDhyaan\BK1';
 [~,~,~,electrodeGroupList0,groupNameList0,highPriorityElectrodeNums] = electrodePositionOnGrid(1,gridType,[],capType);
 numElecGroups =  length(electrodeGroupList0);
 [subjectNameList,expDateList] = getDemographicDetails('BK1');
@@ -34,9 +34,8 @@ if dispForPairedSubject % paired
     axisTitle = sgtitle(['Paired Subjects: n = ' num2str(numSubjects)]);
     set(axisTitle, 'FontSize', 20);
 else % all the subjects
-    fileToLoadSourceString = fullfile(folderSourceString,'ProjectDhyaanBK1Programs','commonAnalysisCodes','informationFiles');
     fileName = 'BK1AllSubjectList.mat';
-    load(fullfile(fileToLoadSourceString,fileName),'allSubjectList','controlList','meditatorList');
+    load(fileName,'allSubjectList','controlList','meditatorList');
     controlSubjectList = controlList;
     goodSubjectList = allSubjectList;
     numSubjects = length(goodSubjectList);
