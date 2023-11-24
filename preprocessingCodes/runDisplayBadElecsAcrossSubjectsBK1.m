@@ -3,7 +3,7 @@
 % Displays for the paired subject if the 'dispForPairedSubject' flag is 'ON'; default: all the subjects
 % Can sort the subjects according to date of data collection if 'sortByDate' flag is 'ON';
 % default: displays for the Meditators followed by Controls
-% Also, displays the badSubjects and bad electrodes accrding to the thresold value
+% Also, displays the badSubjects and bad electrodes according to the threshold value
 
 close all
 clear
@@ -11,7 +11,7 @@ fh = figure(2);
 fh.WindowState = 'maximized';
 dispForPairedSubject = 0;
 sortByDate = 0;
-badElecThresoldBadSub = 0.5;
+badElecThresoldBadSub = 0.50;
 badElecThresoldAcrossSubject = 0.35;
 
 % fixed variables
@@ -79,6 +79,7 @@ binarybadElecPercentageAcrossSubjects = (badElecPercentageAcrossSubjects > badEl
 
 % sorting the subjects accoring to exp dates
 [sortedExpDate,orginalSortedIndexExpDate] = sort(absExpDate);
+sortedbadElecPercent   = badElecPercentage(orginalSortedIndexExpDate);
 sortedBadSubjectStatus = badSubjectStatus(orginalSortedIndexExpDate);
 sortedSubjectList      = goodSubjectList(orginalSortedIndexExpDate);
 
@@ -121,7 +122,7 @@ end
 % plot elcs x Sub Matrix
 h1 = getPlotHandles(1,1,[0.15 0.1 0.8 0.7]);
 imagesc(1:numSubjects,numElecs:-1:1,flipud(sortedElecMatrix),'parent',h1);
-set(h1,'Xtick',1:1:numSubjects,'TickDir','out','TickLength',[0.005, 0.001]);
+set(h1,'Xtick',1:1:numSubjects,'TickDir','out','TickLength',[0.005, 0.001],'XTickLabelRotation',0);
 set(h1,'Ytick',1:1:numElecs,'YTickLabel',[],'TickDir','out','TickLength',[0.005, 0.001]);
 
 colormap(h1,[gray(64)]);
@@ -135,13 +136,23 @@ end
 % shows the badSubjects
 yPos = 71;
 xOffSet = 0.265;
-badSubInd=find(sortedBadSubjectStatus==1);
-for b=1:length(badSubInd)
-    text(badSubInd(b)-xOffSet,yPos,'x','Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+if sortByDate
+    badSubInd = find(sortedBadSubjectStatus==1);
+    for b=1:length(badSubInd)
+        text(badSubInd(b)-xOffSet,yPos,['x (' num2str(sortedbadElecPercent(badSubInd(b))) ')'],'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+        text(badSubInd(b)-xOffSet,yPos+2,sortedSubjectList{badSubInd(b)},'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+    end
+else
+    badSubInd = find(badSubjectStatus==1);
+    for b=1:length(badSubInd)
+        text(badSubInd(b)-xOffSet,yPos,['x (' num2str(badElecPercentage(badSubInd(b))) ')'],'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+        text(badSubInd(b)-xOffSet,yPos+2,goodSubjectList{badSubInd(b)},'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+    end
 end
 
+
 % shows the badElectrodes
-xPos=79;
+xPos=numSubjects+1;
 yOffSet = 0.4;
 badElecInd = find(badElecStatus==1);
 for e=1:length(badElecInd)
