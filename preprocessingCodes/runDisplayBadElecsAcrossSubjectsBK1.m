@@ -5,9 +5,9 @@
 % default: displays for the Meditators followed by Controls
 % Also, displays the badSubjects and bad electrodes according to the threshold value
 
-close all
+% close all
 clear
-fh = figure(2);
+fh = figure(3);
 fh.WindowState = 'maximized';
 dispForPairedSubject = 0;
 sortByDate = 0;
@@ -27,22 +27,25 @@ numElecGroups =  length(electrodeGroupList0);
 
 % get the subject List
 if dispForPairedSubject % paired
-    pairedSubjectNameList = getMatchedSubjectsBK1;
+    pairedSubjectNameList = getPairedSubjectsBK1;
     goodSubjectList = pairedSubjectNameList(:);
     controlSubjectList = pairedSubjectNameList(:,2);
     numSubjects = length(goodSubjectList);
+    numMeditators = size(pairedSubjectNameList,1);
     axisTitle = sgtitle(['Paired Subjects: n = ' num2str(numSubjects)]);
     set(axisTitle, 'FontSize', 20);
 else % all the subjects
     fileName = 'BK1AllSubjectList.mat';
     load(fileName,'allSubjectList','controlList','meditatorList');
+%     [allSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
     controlSubjectList = controlList;
     goodSubjectList = allSubjectList;
     numSubjects = length(goodSubjectList);
+    numMeditators = length(meditatorList);
     axisTitle = sgtitle(['All Subjects: n = ' num2str(numSubjects)]);
     set(axisTitle, 'FontSize', 20);
 end
-
+numControls = numSubjects-numMeditators;
 % BadElecs x Subject matrix
 %-----------------------------------------------------
 absExpDate        = zeros(1,numSubjects);
@@ -73,9 +76,18 @@ for s=1:numSubjects
     absExpDate(1,s) = datenum([x(1:2) '/' x(3:4) '/' x(5:6)],'dd/mm/yy');
 end
 
+% get the bad elecs percentage for individual subjects per group
+badElecPercentageIndMeditators = badElecPercentage(:,1:numMeditators);
+badElecPercentageIndConrols    = badElecPercentage(:,numMeditators+1:end);
+
 % gets the bad elecs percentage across subjects
-badElecPercentageAcrossSubjects       = round(sum(allBadElecsMatrix,2)/numSubjects,2);
-binarybadElecPercentageAcrossSubjects = (badElecPercentageAcrossSubjects > badElecThresoldAcrossSubject);
+% badElecPercentageAcrossSubjects       = round(sum(allBadElecsMatrix,2)/numSubjects,2);
+% binarybadElecPercentageAcrossSubjects = (badElecPercentageAcrossSubjects > badElecThresoldAcrossSubject);
+
+% get the bad elecs percentage across groups
+badElecPercentageAcrossMeditators       = round(sum(allBadElecsMatrix(:,1:numMeditators),2)/numMeditators,2);
+badElecPercentageAcrossControls         = round(sum(allBadElecsMatrix(:,numMeditators+1:end),2)/numControls,2);
+binarybadElecPercentageAcrossSubjects   = (badElecPercentageAcrossMeditators > badElecThresoldAcrossSubject) | (badElecPercentageAcrossControls > badElecThresoldAcrossSubject);
 
 % sorting the subjects accoring to exp dates
 [sortedExpDate,orginalSortedIndexExpDate] = sort(absExpDate);
