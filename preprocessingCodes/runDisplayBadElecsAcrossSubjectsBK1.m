@@ -7,9 +7,9 @@
 
 % close all
 clear
-fh = figure(3);
+fh = figure(1);
 fh.WindowState = 'maximized';
-dispForPairedSubject = 0;
+dispForPairedSubject = 1;
 sortByDate = 0;
 badElecThresoldBadSub = 0.50;
 badElecThresoldAcrossSubject = 0.35;
@@ -67,7 +67,7 @@ for s=1:numSubjects
     allBadElecsMatrix(badElecrodesIndex,s) = 1;
     % calculate and save bad elec percentage
     % and assign the badSubject Status
-    badElecPercentage(1,s) = round(length(badElecrodesIndex)/numElecs,2);
+    badElecPercentage(1,s) = length(badElecrodesIndex)/numElecs;
     if badElecPercentage(1,s) > badElecThresoldBadSub
         badSubjectStatus(1,s) = 1;
     end
@@ -206,3 +206,16 @@ set(gca,'YDir','normal','YTick',[],'Yticklabel',[]);
 % denotes the subject Groups
 text(5,300,'Meditators','Color','red','Rotation',0,'FontSize',14,'fontweight','bold','parent',h2);
 text(5,410,'Controls','Color','green','Rotation',0,'FontSize',14,'fontweight','bold','parent',h2);
+
+%%%%%%%%%%%%%%%% Display the bad electrodes across groups %%%%%%%%%%%%%%%%%
+dataArray{1,1} = badElecPercentageIndMeditators * numElecs;
+dataArray{1,2} = badElecPercentageIndConrols * numElecs;
+
+colorArray = {'r','g'};
+showData = 1;
+plotQuartiles = 1;
+showSignificance = 1;
+pairedDataFlag = dispForPairedSubject;
+
+fh = figure(2);
+figHandles=displayViolinPlot(dataArray,colorArray,showData,plotQuartiles,showSignificance,pairedDataFlag);
