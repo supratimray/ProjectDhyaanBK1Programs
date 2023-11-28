@@ -85,12 +85,13 @@ if showSignificance
     yPos = [commonMax+1 commonMax+1];
     plot(xPos,yPos);
     set(gca,'YLim',[commonMin-3 commonMax+4]);
+
     if p<0.05
         text(mean(xPos),commonMax+1.38,'*','FontSize',20);
         text(mean(xPos)+0.01,commonMax+1.8,[' (' num2str(round(p,4)) ')'],'FontSize',16);
     else
-        text(mean(xPos),commonMax+1.55,'N.S.','FontSize',16);
-        text(mean(xPos)+0.06,commonMax+1.55,[' (' num2str(round(p,4)) ')'],'FontSize',16);
+        text(mean(xPos),commonMax+1.65,'N.S.','FontSize',16);
+        text(mean(xPos)+0.06,commonMax+1.65,[' (' num2str(round(p,4)) ')'],'FontSize',16);
     end
 end
 end

@@ -103,8 +103,10 @@ badElecPercentageIndConrols    = badElecPercentage(:,numMeditators+1:end);
 badElecPercentageAcrossMeditators       = round(sum(allBadElecsMatrix(:,1:numMeditators),2)/numMeditators,2);
 badElecPercentageAcrossControls         = round(sum(allBadElecsMatrix(:,numMeditators+1:end),2)/numControls,2);
 binarybadElecPercentageAcrossSubjects   = (badElecPercentageAcrossMeditators > badElecThresoldAcrossSubject) | (badElecPercentageAcrossControls > badElecThresoldAcrossSubject);
-declaredBadElecs                        = allEEGElecArray(binarybadElecPercentageAcrossSubjects);
-disp(['Bad elctrodes according to the current thresold(' num2str(badElecThresoldAcrossSubject) ') are ' num2str(declaredBadElecs)]);
+binaryDeclaredBadElecAcrossSubjects     = ismember(allEEGElecArray, declaredBadElectrodes)';
+
+badElecsCurrentThreshold                = allEEGElecArray(binarybadElecPercentageAcrossSubjects);
+disp(['Bad elctrodes according to the current thresold(' num2str(badElecThresoldAcrossSubject) ') are ' num2str(badElecsCurrentThreshold)]);
 
 % sorting the subjects accoring to exp dates
 [sortedExpDate,orginalSortedIndexExpDate] = sort(absExpDate);
@@ -134,12 +136,15 @@ elecVal = 1;
 startPos = 1;
 elecGroupVec = zeros(numElecs,1);
 sortedElecMatrix = zeros(numElecs,numSubjects);
+% badDeclaredElecStatus = zeros(numElecs,numSubjects);
+
 for g=1:numElecGroups % Electrode Group
     electrodeList = electrodeGroupList0{g};
     endPos = startPos+length(electrodeList)-1;
 
-    sortedElecMatrix(startPos:endPos,:) = allBadElecsMatrixSortedExpDate(electrodeList,:);
-    badElecStatus(startPos:endPos,:)    = binarybadElecPercentageAcrossSubjects(electrodeList,:);
+    sortedElecMatrix(startPos:endPos,:)         = allBadElecsMatrixSortedExpDate(electrodeList,:);
+    badElecStatus(startPos:endPos,:)            = binarybadElecPercentageAcrossSubjects(electrodeList,:);
+    badDeclaredElecStatus(startPos:endPos,:)    = binaryDeclaredBadElecAcrossSubjects(electrodeList,:);
 
     elecGroupVec(startPos:endPos,:) = elecVal;
     startPos = startPos+length(electrodeList);
@@ -184,8 +189,14 @@ end
 xPos=numSubjects+1;
 yOffSet = 0.4;
 badElecInd = find(badElecStatus==1);
+declaredBadElecInd = find(badDeclaredElecStatus==1);
+newBadElecInd = setdiff(badElecInd,declaredBadElecInd);
 for e=1:length(badElecInd)
-    text(xPos,badElecInd(e)+yOffSet,'x','Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+    if ismember(badElecInd(e),newBadElecInd)
+        text(xPos,badElecInd(e)+yOffSet,'x','Color','Green','FontSize',12,'FontWeight','bold','Parent',h1);
+    else
+        text(xPos,badElecInd(e)+yOffSet,'x','Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+    end 
 end
 
 % shows the elecGroups
