@@ -11,11 +11,11 @@ close all
 clear
 fh = figure(1);
 fh.WindowState = 'maximized';
-dispForPairedSubject = 1;
-sortByDate = 0;
-removeDeclaredBadElecs = 1;
-removeDeclaredBadSubjects = 0;
+% dispForPairedSubject = 0; removeDeclaredBadElecs = 0; removeDeclaredBadSubjects = 0; % Use this option to get all 76 subjects and all electrodes
+% dispForPairedSubject = 0; removeDeclaredBadElecs = 1; removeDeclaredBadSubjects = 0; % Use this option to get all 76 subjects but remove the electrodes that are declared to be bad
+dispForPairedSubject = 0; removeDeclaredBadElecs = 1; removeDeclaredBadSubjects = 1; % Use this option to get 74 subjects and remove the electrodes that are declared to be bad
 
+sortByDate = 0;
 badElecThresoldBadSub = 0.50;
 badElecThresoldAcrossSubject = 0.35;
 
