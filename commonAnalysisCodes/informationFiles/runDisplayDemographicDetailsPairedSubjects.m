@@ -2,7 +2,7 @@
 projectName = 'BK1';
 [subjectNameList,expDateList,labelList,ageList,genderList,educationList,mcList] = getDemographicDetails(projectName);
 
-pairedSubjectNameList = getMatchedSubjectsBK1;
+pairedSubjectNameList = getPairedSubjectsBK1;
 numPairs = size(pairedSubjectNameList,1);
 numGroup = size(pairedSubjectNameList,2);
 strList = [{'M'} {'C'}];

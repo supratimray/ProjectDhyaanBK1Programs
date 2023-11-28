@@ -4,19 +4,25 @@
 % Can sort the subjects according to date of data collection if 'sortByDate' flag is 'ON';
 % default: displays for the Meditators followed by Controls
 % Also, displays the badSubjects and bad electrodes according to the threshold value
+% Added functionality to display the declaredBadElecs based on the threshold value (set removeDeclaredBadElecs flag=0)
+% For paired subject, if we declare bad electrodes the difference is not significant
 
-% close all
+close all
 clear
 fh = figure(1);
 fh.WindowState = 'maximized';
 dispForPairedSubject = 1;
 sortByDate = 0;
+removeDeclaredBadElecs = 1;
+removeDeclaredBadSubjects = 0;
+
 badElecThresoldBadSub = 0.50;
 badElecThresoldAcrossSubject = 0.35;
 
 % fixed variables
 badTrialNameStr = '_wo_v8';
 numElecs = 64;
+allEEGElecArray = 1:numElecs;
 protocolName = 'G1';
 gridType = 'EEG';
 capType = 'actiCap64_UOL';
@@ -35,9 +41,12 @@ if dispForPairedSubject % paired
     axisTitle = sgtitle(['Paired Subjects: n = ' num2str(numSubjects)]);
     set(axisTitle, 'FontSize', 20);
 else % all the subjects
-    fileName = 'BK1AllSubjectList.mat';
-    load(fileName,'allSubjectList','controlList','meditatorList');
-%     [allSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
+    if removeDeclaredBadSubjects
+        [allSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
+    else
+        fileName = 'BK1AllSubjectList.mat';
+        load(fileName,'allSubjectList','controlList','meditatorList');
+    end
     controlSubjectList = controlList;
     goodSubjectList = allSubjectList;
     numSubjects = length(goodSubjectList);
@@ -62,7 +71,13 @@ for s=1:numSubjects
     noisyElecs        = badTrialsInfo.badElecs.noisyElecs;
     flatPSDElecs      = badTrialsInfo.badElecs.flatPSDElecs;
     badImpedanceElecs = badTrialsInfo.badElecs.badImpedanceElecs;
-    badElecrodesIndex = unique([badImpedanceElecs;noisyElecs;flatPSDElecs]);
+    if removeDeclaredBadElecs
+        declaredBadElectrodes = getDeclaredBadElecs;
+        badElecrodesIndex     = unique([badImpedanceElecs;noisyElecs;flatPSDElecs;declaredBadElectrodes']);
+    else
+        badElecrodesIndex = unique([badImpedanceElecs;noisyElecs;flatPSDElecs]);
+    end
+
     % assign the values to the matrix
     allBadElecsMatrix(badElecrodesIndex,s) = 1;
     % calculate and save bad elec percentage
@@ -88,6 +103,8 @@ badElecPercentageIndConrols    = badElecPercentage(:,numMeditators+1:end);
 badElecPercentageAcrossMeditators       = round(sum(allBadElecsMatrix(:,1:numMeditators),2)/numMeditators,2);
 badElecPercentageAcrossControls         = round(sum(allBadElecsMatrix(:,numMeditators+1:end),2)/numControls,2);
 binarybadElecPercentageAcrossSubjects   = (badElecPercentageAcrossMeditators > badElecThresoldAcrossSubject) | (badElecPercentageAcrossControls > badElecThresoldAcrossSubject);
+declaredBadElecs                        = allEEGElecArray(binarybadElecPercentageAcrossSubjects);
+disp(['Bad elctrodes according to the current thresold(' num2str(badElecThresoldAcrossSubject) ') are ' num2str(declaredBadElecs)]);
 
 % sorting the subjects accoring to exp dates
 [sortedExpDate,orginalSortedIndexExpDate] = sort(absExpDate);
@@ -217,5 +234,11 @@ plotQuartiles = 1;
 showSignificance = 1;
 pairedDataFlag = dispForPairedSubject;
 
-fh = figure(2);
+fh2 = figure(2);
+fh2.WindowState = 'maximized';
 figHandles=displayViolinPlot(dataArray,colorArray,showData,plotQuartiles,showSignificance,pairedDataFlag);
+ylabel('Num Bad Elecs');
+xticks(1:length(dataArray));
+xticklabels({'Meditators', 'Controls'});
+set(gca, 'FontSize', 12,'FontWeight','Bold');
+set(gca, 'TickDir', 'out');
