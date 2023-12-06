@@ -126,10 +126,6 @@ showElectrodeGroups(hBadElectrodes2(3:4),capType,electrodeGroupList,groupNameLis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Getting the Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for g=1:numGroups % for different electrode groups getting the power data
 
-    if g==4
-        flag;
-    end
-
     disp(['Working on group: ' groupNameList{g}]);
     psdVals     = cell(1,numProtocols);
     freqVals    = cell(1,numProtocols);
@@ -263,7 +259,7 @@ for g=1:numGroups % for different electrode groups getting the power data
                         startTrialInd=1;
                         trialIncrement=119;
 
-                        % for a speacial case where the numtrials is less than 360 for meditation segemnts
+                        % for a special case where the numtrials is less than 360 for meditation segemnts
                         if size(tfPower{i},3)<360
                             tfPower{i}(:,:,359:360)=repmat(zeros(size(tfPower{i},1),size(tfPower{i},2)),[1 1 2]);
                             badTrialsList{i}=[badTrialsList{i}; 359; 360];
