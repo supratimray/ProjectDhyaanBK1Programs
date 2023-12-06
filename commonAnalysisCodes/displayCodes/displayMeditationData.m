@@ -126,6 +126,10 @@ showElectrodeGroups(hBadElectrodes2(3:4),capType,electrodeGroupList,groupNameLis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Getting the Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for g=1:numGroups % for different electrode groups getting the power data
 
+    if g==4
+        flag;
+    end
+
     disp(['Working on group: ' groupNameList{g}]);
     psdVals     = cell(1,numProtocols);
     freqVals    = cell(1,numProtocols);
@@ -156,6 +160,8 @@ for g=1:numGroups % for different electrode groups getting the power data
         if ~isempty(electrodeList)
             protocolName = protocolNameList{i};
             badTrials = badTrialsList{i};
+            disp(protocolName);
+
             [psdVals{i},freqVals{i},psdAcrossElc,tfPower{i},timeValsTF,~] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,refScheme,capType,trialAvgFlag,diffTf,badTrials);
 
             meanPSDVals{i} = mean(psdVals{i}(:,setdiff(1:size(psdVals{i},2),badTrialsList{i})),2);      % psd across good trials
@@ -196,172 +202,177 @@ for g=1:numGroups % for different electrode groups getting the power data
     timeVecIni=1;
     dimForTrials = 3; % trials are on the third dimention
 
-    timeRange   = [-1 0];  % baseline range
-    protocolName = 'G1';
-    protocolIndex = 3;
-    [psdValsBl,freqVals{i},psdAcrossElc,tfPowerBl,timeValsTFBL,freqValsTF] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,refScheme,capType,trialAvgFlag,diffTf,badTrials,timeRange);
-    numTrials = size(psdValsBl,2);
+    if ~isempty(electrodeList)
 
-    if g==6
-        % get Baseline Psd:
-        meanPSDValsBL  = mean(psdValsBl(:,setdiff(1:numTrials,badTrialsList{protocolIndex})),2);
-        alphaBl  = log10(mean(meanPSDValsBL(alphaPos),1));
-        SGBl     = log10(mean(meanPSDValsBL(sgPos),1));
-        FGBl     = log10(mean(meanPSDValsBL(fgPos),1));
-    end
+        timeRange   = [-1 0];  % baseline range
+        protocolName = 'G1';
+        protocolIndex = 3;
+        [psdValsBl,freqVals{i},psdAcrossElc,tfPowerBl,timeValsTFBL,freqValsTF] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,refScheme,capType,trialAvgFlag,diffTf,badTrials,timeRange);
+        numTrials = size(psdValsBl,2);
 
-    % get BaseLine TF
-    blTfMeanTrials = mean(tfPowerBl(:,:,setdiff(1:numTrials,badTrialsList{1})),dimForTrials); % BL power is calculated from G1 protocol
-    blTFMeanTime = mean(blTfMeanTrials,1);
-    blTFLog      = conv2Log(blTFMeanTime);
-    blTF         = repmat(blTFLog,length(timeValsTFBL),1);
-
-    for i=1:numProtocols
-        if i==4||i==8 % for M1 and M2 protocol
-            increment=15;
-        else
-            increment=5;
+        if g==6
+            % get Baseline Psd:
+            meanPSDValsBL  = mean(psdValsBl(:,setdiff(1:numTrials,badTrialsList{protocolIndex})),2);
+            alphaBl  = log10(mean(meanPSDValsBL(alphaPos),1));
+            SGBl     = log10(mean(meanPSDValsBL(sgPos),1));
+            FGBl     = log10(mean(meanPSDValsBL(fgPos),1));
         end
 
-        % Time-frequency plots
-        if ~isempty(psdVals{i})
-            numTrials = size(psdVals{i},2);
+        % get BaseLine TF
+        blTfMeanTrials = mean(tfPowerBl(:,:,setdiff(1:numTrials,badTrialsList{1})),dimForTrials); % BL power is calculated from G1 protocol
+        blTFMeanTime = mean(blTfMeanTrials,1);
+        blTFLog      = conv2Log(blTFMeanTime);
+        blTF         = repmat(blTFLog,length(timeValsTFBL),1);
 
-            if rawTfTrialWise % rawTF plots TF TrialWise for all the trials
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}));
-                shading(hTF(g,i),'interp');
-                clim(hTF(g,i),cLimsPlot);
-                ylim(hTF(g,i),freqRangeHz);
+        for i=1:numProtocols
+            if i==4||i==8 % for M1 and M2 protocol
+                increment=15;
+            else
+                increment=5;
+            end
 
-            elseif diffTf
-                if any(strcmp(protocolNameList(i),{'EO1','EC1','G1'})) % plot as it is after averaging across trials
-                    % plotting index does not change
-                    % select only Good trials out of all the trials
-                    currSegTFAccTrials = mean(tfPower{i}(:,:,setdiff(1:numTrials,badTrialsList{i})),dimForTrials);
-                    pcolor(hTF(g,i),timeValsTF,freqValsTF,10*(log10(currSegTFAccTrials)-blTF)');
+            % Time-frequency plots
+            if ~isempty(psdVals{i})
+                numTrials = size(psdVals{i},2);
+
+                if rawTfTrialWise % rawTF plots TF TrialWise for all the trials
+                    pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}));
                     shading(hTF(g,i),'interp');
                     clim(hTF(g,i),cLimsPlot);
                     ylim(hTF(g,i),freqRangeHz);
 
-                elseif any(strcmp(protocolNameList(i),{'M1','M2'})) % change the index and plot segment wise. TA
-                    % creating new indexes for M1 and M1 (a,b and C)
-                    if any(strcmp(protocolNameList(i),{'M1'}))
-                        j=i;
-                        modIndexForMedSeg = j;
-                    else % for M2
-                        j=10;
-                        modIndexForMedSeg = j;
-                    end
-                    startTrialInd=1;
-                    trialIncrement=119;
+                elseif diffTf
+                    if any(strcmp(protocolNameList(i),{'EO1','EC1','G1'})) % plot as it is after averaging across trials
+                        % plotting index does not change
+                        % select only Good trials out of all the trials
+                        currSegTFAccTrials = mean(tfPower{i}(:,:,setdiff(1:numTrials,badTrialsList{i})),dimForTrials);
+                        pcolor(hTF(g,i),timeValsTF,freqValsTF,10*(log10(currSegTFAccTrials)-blTF)');
+                        shading(hTF(g,i),'interp');
+                        clim(hTF(g,i),cLimsPlot);
+                        ylim(hTF(g,i),freqRangeHz);
 
-                    % for a speacial case where the numtrials is less than 360 for meditation segemnts
-                    if size(tfPower{i},3)<360
-                        tfPower{i}(:,:,359:360)=repmat(zeros(size(tfPower{i},1),size(tfPower{i},2)),[1 1 2]);
-                        badTrialsList{i}=[badTrialsList{i}; 359; 360];
-                    end
-
-                    for medSegIndex=1:3
-                        endTrialIndex = startTrialInd+trialIncrement;
-                        currSegTFAllTrials = tfPower{i}(:,:,setdiff(startTrialInd:endTrialIndex,badTrialsList{i}));
-                        currSegTFAccTrials = mean(currSegTFAllTrials,dimForTrials);
-
-                        pcolor(hTF(g,modIndexForMedSeg),timeValsTF,freqValsTF,10*(log10(currSegTFAccTrials)-blTF)');
-                        shading(hTF(g,modIndexForMedSeg),'interp');
-                        clim(hTF(g,modIndexForMedSeg),cLimsPlot);
-                        ylim(hTF(g,modIndexForMedSeg),freqRangeHz);
-
-                        modIndexForMedSeg = j + medSegIndex;
-                        startTrialInd     = startTrialInd+120;
-
-                        if g==1 && medSegIndex==3  && any(strcmp(protocolNameList(i),{'M2'}))
-                            colorBarAx=colorbar(hTF(g,modIndexForMedSeg-1));
-                            colorBarAx.Position(1)=colorBarAx.Position(1)+0.025;
+                    elseif any(strcmp(protocolNameList(i),{'M1','M2'})) % change the index and plot segment wise. TA
+                        % creating new indexes for M1 and M1 (a,b and C)
+                        if any(strcmp(protocolNameList(i),{'M1'}))
+                            j=i;
+                            modIndexForMedSeg = j;
+                        else % for M2
+                            j=10;
+                            modIndexForMedSeg = j;
                         end
+                        startTrialInd=1;
+                        trialIncrement=119;
+
+                        % for a speacial case where the numtrials is less than 360 for meditation segemnts
+                        if size(tfPower{i},3)<360
+                            tfPower{i}(:,:,359:360)=repmat(zeros(size(tfPower{i},1),size(tfPower{i},2)),[1 1 2]);
+                            badTrialsList{i}=[badTrialsList{i}; 359; 360];
+                        end
+
+                        for medSegIndex=1:3
+                            endTrialIndex = startTrialInd+trialIncrement;
+                            currSegTFAllTrials = tfPower{i}(:,:,setdiff(startTrialInd:endTrialIndex,badTrialsList{i}));
+                            currSegTFAccTrials = mean(currSegTFAllTrials,dimForTrials);
+
+                            pcolor(hTF(g,modIndexForMedSeg),timeValsTF,freqValsTF,10*(log10(currSegTFAccTrials)-blTF)');
+                            shading(hTF(g,modIndexForMedSeg),'interp');
+                            clim(hTF(g,modIndexForMedSeg),cLimsPlot);
+                            ylim(hTF(g,modIndexForMedSeg),freqRangeHz);
+
+                            modIndexForMedSeg = j + medSegIndex;
+                            startTrialInd     = startTrialInd+120;
+
+                            if g==1 && medSegIndex==3  && any(strcmp(protocolNameList(i),{'M2'}))
+                                colorBarAx=colorbar(hTF(g,modIndexForMedSeg-1));
+                                colorBarAx.Position(1)=colorBarAx.Position(1)+0.025;
+                            end
+                        end
+
+                    elseif any(strcmp(protocolNameList(i),{'G2','EO2','EC2'}))
+                        modIndexForAFterMedSeg = i+2; % new Indexes after M1 (shifted by 2)
+                        % select only Good trials out of all the trials
+                        currSegTFAccTrials = mean(tfPower{i}(:,:,setdiff(1:size(tfPower{1},3),badTrialsList{i})),dimForTrials);
+                        pcolor(hTF(g,modIndexForAFterMedSeg),timeValsTF,freqValsTF,10*(log10((currSegTFAccTrials))-blTF)');
+                        shading(hTF(g,modIndexForAFterMedSeg),'interp');
+                        clim(hTF(g,modIndexForAFterMedSeg),cLimsPlot);
+                        ylim(hTF(g,modIndexForAFterMedSeg),freqRangeHz);
                     end
 
-                elseif any(strcmp(protocolNameList(i),{'G2','EO2','EC2'}))
-                    modIndexForAFterMedSeg = i+2; % new Indexes after M1 (shifted by 2)
-                    % select only Good trials out of all the trials
-                    currSegTFAccTrials = mean(tfPower{i}(:,:,setdiff(1:size(tfPower{1},3),badTrialsList{i})),dimForTrials);
-                    pcolor(hTF(g,modIndexForAFterMedSeg),timeValsTF,freqValsTF,10*(log10((currSegTFAccTrials))-blTF)');
-                    shading(hTF(g,modIndexForAFterMedSeg),'interp');
-                    clim(hTF(g,modIndexForAFterMedSeg),cLimsPlot);
-                    ylim(hTF(g,modIndexForAFterMedSeg),freqRangeHz);
+                else % plots diffTF for all the trials (no badTrial rejection)
+                    bl = repmat(meanPSDVals{1},1,numTrials);
+                    pcolor(hTF(g,i),1:numTrials,freqVals{i},10*(log10((psdVals{i}))-log10(bl)));
+                    shading(hTF(g,i),'interp');
+                    clim(hTF(g,i),cLimsPlot);
+                    ylim(hTF(g,i),freqRangeHz);
                 end
 
-            else % plots diffTF for all the trials (no badTrial rejection)
-                bl = repmat(meanPSDVals{1},1,numTrials);
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},10*(log10((psdVals{i}))-log10(bl)));
-                shading(hTF(g,i),'interp');
-                clim(hTF(g,i),cLimsPlot);
-                ylim(hTF(g,i),freqRangeHz);
+                hold(hTF(g,i),'on');
+
+                if ~isempty(badTrialsList{i})
+                    % showing badTrials and total elecs in eachGroup
+                    if rawTfTrialWise
+                        plot(hTF(g,i),badTrialsList{i},freqRangeHz(2)-1,'k.');
+                    end
+                    text(1,freqRangeHz(2)-5,['N=' num2str(numGoodElectrodesList(i))],'parent',hTF(g,i));
+                end
             end
 
-            hold(hTF(g,i),'on');
+            if (i==1 && g<numGroups)
+                set(hTF(g,i),'XTickLabel',[]); % only remove x label
+            elseif (i>1 && g<numGroups)
+                set(hTF(g,i),'XTickLabel',[],'YTickLabel',[]);
+            elseif (i>1 && g==numGroups)
+                set(hTF(g,i),'YTickLabel',[]); % only remove y label
+            end
 
-            if ~isempty(badTrialsList{i})
-                % showing badTrials and total elecs in eachGroup
+            if g==6
+                % plot the power vs time for alpha,sg and fg
+                timeVec=timeVecIni:(timeVecIni+(increment-1));
+                plot(hPowerVsTime(1),timeVec,10*(nonzeros(meanAlphaCurrSeg(i,:))-repmat(alphaBl,length(nonzeros(meanAlphaCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
+                set(hPowerVsTime(1),'XTickLabel',[]); hold(hPowerVsTime(1),'on');
+
+                plot(hPowerVsTime(2),timeVec,10*(nonzeros(meanSGCurrSeg(i,:))-repmat(SGBl,length(nonzeros(meanSGCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
+                set(hPowerVsTime(2),'XTickLabel',[]); hold(hPowerVsTime(2),'on');
+
+                plot(hPowerVsTime(3),timeVec,10*(nonzeros(meanFGCurrSeg(i,:))-repmat(FGBl,length(nonzeros(meanFGCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
+            end
+            timeVecIni=timeVecIni+increment;
+        end
+
+        ylabel(hTF(g,1),groupNameList{g});
+        xlabel(hPowerVsTime(3),'Time (min)');
+        ylabel(hPowerVsTime(3),'\Delta Power (dB)'); hold(hPowerVsTime(3),'on');
+
+        % meanPSD Plots
+        for i = 1:numPSDComparisons
+            for s=1:length(comparePSDConditions{i})
+                conditionNum = comparePSDConditions{i}(s);
                 if rawTfTrialWise
-                    plot(hTF(g,i),badTrialsList{i},freqRangeHz(2)-1,'k.');
+                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum});
+                else
+                    if ~isempty(meanPSDVals{conditionNum})
+                        % bl = repmat(meanPSDVals{1},1,numTrials); % including all the trials
+                        plot(hPSD(g,i),freqVals{conditionNum},10*(log10(meanPSDVals{conditionNum})-log10(meanPSDVals{1})),'color',colorNames{conditionNum});
+                    end
                 end
-                text(1,freqRangeHz(2)-5,['N=' num2str(numGoodElectrodesList(i))],'parent',hTF(g,i));
+                hold(hPSD(g,i),'on');
+            end
+
+            if ~rawTfTrialWise
+                plot(hPSD(g,i),freqVals{conditionNum},zeros(1,length(freqVals{conditionNum})),'k--');
+            end
+
+            xlim(hPSD(g,i),freqRangeHz);
+            ylim(hPSD(g,i),cLimsPlot);
+            if g<numGroups
+                set(hPSD(g,i),'XTickLabel',[]);
+            end
+
+            if g==1
+                title(hPSD(g,i),comparePSDConditionStr{i});
             end
         end
-
-        if (i==1 && g<numGroups)
-            set(hTF(g,i),'XTickLabel',[]); % only remove x label
-        elseif (i>1 && g<numGroups)
-            set(hTF(g,i),'XTickLabel',[],'YTickLabel',[]);
-        elseif (i>1 && g==numGroups)
-            set(hTF(g,i),'YTickLabel',[]); % only remove y label
-        end
-
-        if g==6
-            % plot the power vs time for alpha,sg and fg
-            timeVec=timeVecIni:(timeVecIni+(increment-1));
-            plot(hPowerVsTime(1),timeVec,10*(nonzeros(meanAlphaCurrSeg(i,:))-repmat(alphaBl,length(nonzeros(meanAlphaCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
-            set(hPowerVsTime(1),'XTickLabel',[]); hold(hPowerVsTime(1),'on');
-
-            plot(hPowerVsTime(2),timeVec,10*(nonzeros(meanSGCurrSeg(i,:))-repmat(SGBl,length(nonzeros(meanSGCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
-            set(hPowerVsTime(2),'XTickLabel',[]); hold(hPowerVsTime(2),'on');
-
-            plot(hPowerVsTime(3),timeVec,10*(nonzeros(meanFGCurrSeg(i,:))-repmat(FGBl,length(nonzeros(meanFGCurrSeg(i,:))),1)),'-o','MarkerSize',6,'MarkerFaceColor',colorNames{i},'MarkerEdgeColor',colorNames{i},'color',colorNames{i});
-        end
-        timeVecIni=timeVecIni+increment;
-    end
-
-    ylabel(hTF(g,1),groupNameList{g});
-    xlabel(hPowerVsTime(3),'Time (min)');
-    ylabel(hPowerVsTime(3),'\Delta Power (dB)'); hold(hPowerVsTime(3),'on');
-
-    % meanPSD Plots
-    for i = 1:numPSDComparisons
-        for s=1:length(comparePSDConditions{i})
-            conditionNum = comparePSDConditions{i}(s);
-            if rawTfTrialWise
-                plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum});
-            else
-                % bl = repmat(meanPSDVals{1},1,numTrials); % including all the trials
-                plot(hPSD(g,i),freqVals{conditionNum},10*(log10(meanPSDVals{conditionNum})-log10(meanPSDVals{1})),'color',colorNames{conditionNum});
-            end
-            hold(hPSD(g,i),'on');
-        end
-
-        if ~rawTfTrialWise
-            plot(hPSD(g,i),freqVals{conditionNum},zeros(1,length(freqVals{conditionNum})),'k--');
-        end
-
-        xlim(hPSD(g,i),freqRangeHz);
-        ylim(hPSD(g,i),cLimsPlot);
-        if g<numGroups
-            set(hPSD(g,i),'XTickLabel',[]);
-        end
-
-        if g==1
-            title(hPSD(g,i),comparePSDConditionStr{i});
-        end
-    end
+    end % if
 end
 
 if rawTfTrialWise
@@ -456,6 +467,8 @@ if ~exist('timeRange','var') || isempty(timeRange); timeRange= [0.25 1.25]; end
 % timeRange   = [-0.25 1.25];
 tapers      = [1 1];
 freqRange   = [0 100];
+
+disp(protocolName);
 
 folderExtract = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName,'extractedData');
 folderSegment = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName,'segmentedData');

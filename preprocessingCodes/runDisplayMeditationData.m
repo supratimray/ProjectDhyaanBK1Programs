@@ -5,7 +5,7 @@ clear; close all
 folderSourceString      ='D:\Projects\ProjectDhyaan\BK1';
 
 saveFileFlag     = 1;
-closeFig         = 0;
+closeFig         = 1;
 badElectrodeList = [];
 plotRawTFFlag    = [];
 
@@ -14,10 +14,10 @@ timeAvgFlag      = 1;
 tfFlag           = 1;
 
 allIndices = 1:length(goodSubjectList);
-problamaticIndices   = find(strcmp(goodSubjectList,'053DR')); % this indices need to be extracted separately
+problamaticIndices   = find(strcmp(goodSubjectList,'053DR')); % this index need to be extracted separately
 segmentTheseIndices  = setdiff(allIndices,problamaticIndices);
 badTrialNameStr      ='_wo_v8';
-badElectrodeRejectionFlag      = 4; % 1: Don't reject badElectrodes,
+badElectrodeRejectionFlag = 4; % 1: Don't reject badElectrodes,
 % 2: reject badElectrodes for that protocol,
 % 3: Reject badElectrodes common across all the protocols
 % 4: Reject only the declared badElectrodes and reject protocol specific badElectrode
@@ -42,11 +42,12 @@ for i=1:length(segmentTheseIndices)
 end
 
 % Issues during the data display process:
+% Fixed by putting extra conditions while plottng!
 % i = 21, 059MS; EC2 segment
-% i = 34; 024SK; G2 runs for 180  trials
-% i = 45; 063vk;
+% i = 34; 024SK; G2 runs for 180  trials; 
+% i = 45; 063VK; Group 4 
 % i = 58; 080RP
 % i = 66; 092KB
 % i = 67; 093AK
 % i = 69; 098GS;
-% i = 70; 099SP; (fixed)
+% i = 70; 099SP; 
