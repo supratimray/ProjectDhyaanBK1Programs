@@ -2,42 +2,36 @@ clear; close all
 
 [allSubjectNames,expDateList] = getDemographicDetails('BK1');
 [goodSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
-folderSourceString      ='D:\Projects\ProjectDhyaan\BK1';
+folderSourceString      ='N:\Projects\ProjectDhyaan\BK1';
+saveFolderName = 'Results';
 
 saveFileFlag     = 1;
-closeFig         = 1;
-badElectrodeList = [];
-plotRawTFFlag    = [];
+plotRawTFFlag    = 0;
 
-refScheme        = 1; % 1 for unipolar; 2 for bipolar
-timeAvgFlag      = 1;
-tfFlag           = 1;
+badEyeCondition = 'wo'; % use 'wo' for without, 'ep' for eye position and 'em' for eye movement
+badTrialVersion = 'v8';
+badTrialNameStr = ['_' badEyeCondition '_' badTrialVersion];
 
-allIndices = 1:length(goodSubjectList);
-problamaticIndices   = find(strcmp(goodSubjectList,'053DR')); % this index need to be extracted separately
-segmentTheseIndices  = setdiff(allIndices,problamaticIndices);
-badTrialNameStr      ='_wo_v8';
-badElectrodeRejectionFlag = 4; % 1: Don't reject badElectrodes,
+%%%%%%%%%%%%%%%%%%%%%% Bad trial rejection criteria %%%%%%%%%%%%%%%%%%%%%%%
+badElectrodeRejectionFlag = 3; 
+% 1: Don't reject badElectrodes,
 % 2: reject badElectrodes for that protocol,
 % 3: Reject badElectrodes common across all the protocols
-% 4: Reject only the declared badElectrodes and reject protocol specific badElectrode
 
-for i=1:length(segmentTheseIndices)
-    fh=figure(1);
+useTheseIndices = 1;
+
+for i=1:length(useTheseIndices)
+    fh=figure(1); clf(fh);
     fh.WindowState = 'maximized';
-    subjectName = goodSubjectList{segmentTheseIndices(i)};
+    subjectName = goodSubjectList{useTheseIndices(i)};
     disp(['Analyzing for the subject ' subjectName]);
     expDate = expDateList{strcmp(subjectName,allSubjectNames)};
-    displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,refScheme,timeAvgFlag,tfFlag);
+    displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag);
 
     if saveFileFlag
-        fileName = [subjectName '_DisplayResultsV3' '.fig'];
-        fileNameTif = [subjectName '_DisplayResultsV3'];
-        saveas(fh,fileName);
+        makeDirectory(saveFolderName);
+        fileNameTif = fullfile(saveFolderName,[subjectName badTrialNameStr '_badElecChoice' num2str(badElectrodeRejectionFlag) '_raw' num2str(plotRawTFFlag) '.tif']);
         print(fh,fileNameTif,'-dtiff','-r300');
-        if closeFig
-            close(fh);
-        end
     end
 end
 
