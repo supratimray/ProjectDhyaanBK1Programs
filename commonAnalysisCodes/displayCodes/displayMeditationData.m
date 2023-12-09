@@ -3,12 +3,13 @@
 
 % badTrialRejectionFlag: 1: Don't reject badElectrodes, 2: reject badElectrodes for that protocol, 3: Reject badElectrodes of all protocols 
 
-function displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag)
+function displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
 
 if ~exist('folderSourceString','var');    folderSourceString=[];        end
 if ~exist('badElectrodeList','var');      badTrialNameStr='_wo_v8';     end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('plotRawTFFlag','var');         plotRawTFFlag=0;              end
+if ~exist('sortByBadTrialFlag','var');    sortByBadTrialFlag=1;         end
 
 if isempty(folderSourceString)
     folderSourceString = 'N:\Projects\ProjectDhyaan\BK1';
@@ -56,7 +57,7 @@ freqRangeHz = [0 100];
 if plotRawTFFlag
     cLims = [-3 3];
 else
-    cLims = [-1.5 1.5];
+    cLims = [-1 1];
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -66,19 +67,21 @@ badElecList = cell(1,numProtocols);
 badElectrodes.badImpedanceElecs = [];
 badElectrodes.noisyElecs = [];
 badElectrodes.flatPSDElecs = [];
+badElectrodes.declaredBadElecs = [];
 
 for i=1:numProtocols
     protocolName=protocolNameList{i};
     badFileName = fullfile(folderSourceString,'data','segmentedData',subjectName,gridType,expDate,protocolName,'segmentedData',['badTrials' badTrialNameStr '.mat']);
     if exist(badFileName,'file')
-        x=load(badFileName);
-        badTrialsList{i}=x.badTrials;
+        x=getBadTrialInfo(badFileName);
+        badTrialsList{i}=x.badTrials(:);
         badElecList{i} = x.badElecs;
         badElectrodes.badImpedanceElecs = cat(1,badElectrodes.badImpedanceElecs,x.badElecs.badImpedanceElecs);
         badElectrodes.noisyElecs = cat(1,badElectrodes.noisyElecs,x.badElecs.noisyElecs);
         badElectrodes.flatPSDElecs = cat(1,badElectrodes.flatPSDElecs,x.badElecs.flatPSDElecs);
+        badElectrodes.declaredBadElecs = cat(1,badElectrodes.declaredBadElecs,x.badElecs.declaredBadElecs);
         displayBadElecs(hBadElectrodes(i),subjectName,expDate,protocolName,folderSourceString,gridType,capType,badTrialNameStr);
-        title(hBadElectrodes(i),protocolNameList{i},'color',colorNames{i});
+        title(hBadElectrodes(i),[protocolNameList{i} '(' num2str(length(getAllBadElecs(badElecList{i}))) ')'],'color',colorNames{i});
     else
         badTrialsList{i}=[];
         badElecList{i} = [];
@@ -88,6 +91,7 @@ end
 badElectrodes.badImpedanceElecs = unique(badElectrodes.badImpedanceElecs);
 badElectrodes.noisyElecs = unique(badElectrodes.noisyElecs);
 badElectrodes.flatPSDElecs = unique(badElectrodes.flatPSDElecs);
+badElectrodes.declaredBadElecs = unique(badElectrodes.declaredBadElecs);
 displayBadElecs(hBadElectrodes2(1),subjectName,expDate,protocolName,folderSourceString,gridType,capType,badTrialNameStr,badElectrodes,hBadElectrodes2(2));
 
 % displayElectrodeGroups
@@ -105,7 +109,8 @@ for g=1:numGroups
     meanPSDVals = cell(1,numProtocols);
     
     numGoodElectrodesList = zeros(1,numProtocols);
-    
+    numGoodTrials = zeros(1,numProtocols);
+
     for i=1:numProtocols
         
         if badElectrodeRejectionFlag==1
@@ -120,8 +125,16 @@ for g=1:numGroups
         if ~isempty(electrodeList)
             protocolName = protocolNameList{i};
             [psdVals{i},freqVals{i}] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList);
-            meanPSDVals{i} = mean(psdVals{i}(:,setdiff(1:size(psdVals{i},2),badTrialsList{i})),2);
+            goodPos = setdiff(1:size(psdVals{i},2),badTrialsList{i});
+            meanPSDVals{i} = mean(psdVals{i}(:,goodPos),2);
+            numGoodTrials(i) = length(goodPos);
         end
+    end
+
+    if isempty(meanPSDVals{1})
+        disp('baseline condition does not exist. Plotting rawTF');
+        plotRawTFFlag=1;
+        cLims = [-3 3];
     end
     
     for i=1:numProtocols
@@ -129,11 +142,20 @@ for g=1:numGroups
         % Time-frequency plots
         if ~isempty(psdVals{i})
             numTrials = size(psdVals{i},2);
+
+            if sortByBadTrialFlag
+                xPos = [setdiff(1:numTrials,badTrialsList{i}) badTrialsList{i}'];
+                badTrialIndicesToUse = (numTrials-length(badTrialsList{i})+1):numTrials;
+            else
+                xPos = 1:numTrials;
+                badTrialIndicesToUse = badTrialsList{i};
+            end
+
             if plotRawTFFlag
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}));
+                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}(:,xPos)));
             else
                 bl = repmat(meanPSDVals{1},1,numTrials);
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i})-bl);
+                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}(:,xPos))-bl);
             end
             
             shading(hTF(g,i),'interp');
@@ -141,10 +163,14 @@ for g=1:numGroups
             ylim(hTF(g,i),freqRangeHz);
             
             hold(hTF(g,i),'on');
-            plot(hTF(g,i),badTrialsList{i},freqRangeHz(2)-1,'k.');
-            text(1,freqRangeHz(2)-5,['N=' num2str(numGoodElectrodesList(i))],'parent',hTF(g,i));
+            plot(hTF(g,i),badTrialIndicesToUse,freqRangeHz(2)-1,'k.');
+            text(1,freqRangeHz(2)-5,['Elec=' num2str(numGoodElectrodesList(i))],'parent',hTF(g,i));
         end
-        
+
+        if g==1
+            title(hTF(g,i),['Good trials=' num2str(numGoodTrials(i))]);
+        end
+
         if (i==1 && g<numGroups)
             set(hTF(g,i),'XTickLabel',[]); % only remove x label
         elseif (i>1 && g<numGroups)
@@ -160,10 +186,12 @@ for g=1:numGroups
     for i = 1:numPSDComparisons
         for j=1:length(comparePSDConditions{i})
             conditionNum = comparePSDConditions{i}(j);
-            if plotRawTFFlag
-                plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum});
-            else
-                plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum}-meanPSDVals{1},'color',colorNames{conditionNum});
+            if ~isempty(meanPSDVals{conditionNum})
+                if plotRawTFFlag
+                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum});
+                else
+                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum}-meanPSDVals{1},'color',colorNames{conditionNum});
+                end
             end
             hold(hPSD(g,i),'on');
         end
@@ -189,6 +217,13 @@ for i=1:numProtocols
 end
 end
 
+function x=getBadTrialInfo(badFileName)
+x = load(badFileName);
+
+if exist('getDeclaredBadElecs','file')
+    x.badElecs.declaredBadElecs = getDeclaredBadElecs';
+end
+end
 function [psd,freqVals] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList)
 
 timeRange = [0.25 1.25];
@@ -233,7 +268,7 @@ if ~exist('hStats','var');          hStats = [];                        end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 folderSegment = fullfile(folderSourceString,'data','segmentedData',subjectName,gridType,expDate,protocolName,'segmentedData');
-badTrialsInfo = load(fullfile(folderSegment,['badTrials' badTrialNameStr '.mat']));
+badTrialsInfo = getBadTrialInfo(fullfile(folderSegment,['badTrials' badTrialNameStr '.mat']));
 
 %%%%%%%%%%%%%%%%%%%%%% Compare with Montage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x = load([capType 'Labels.mat']); montageLabels = x.montageLabels(:,2);
@@ -263,39 +298,40 @@ end
 badImpedanceElectrodeColor = 'r';
 noisyElectrodeColor = 'm';
 flatPSDElectrodeColor = 'b';
+declaredBadElectrodeColor = 'k';
+
 if isempty(badElectrodes)
     badImpedanceElectrodes = badTrialsInfo.badElecs.badImpedanceElecs;
     noisyElectrodes = badTrialsInfo.badElecs.noisyElecs;
     flatPSDElectrodes = badTrialsInfo.badElecs.flatPSDElecs;
+    declaredBadElectrodes = badTrialsInfo.badElecs.declaredBadElecs;
 else
     badImpedanceElectrodes = badElectrodes.badImpedanceElecs;
     noisyElectrodes = badElectrodes.noisyElecs;
     flatPSDElectrodes = badElectrodes.flatPSDElecs;
+    declaredBadElectrodes = badElectrodes.declaredBadElecs;
 end
 
 topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{badImpedanceElectrodes,'o',badImpedanceElectrodeColor,electrodeSize});
 topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{noisyElectrodes,'o',noisyElectrodeColor,electrodeSize});
 topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{flatPSDElectrodes,'o',flatPSDElectrodeColor,electrodeSize});
+topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{declaredBadElectrodes,'o',declaredBadElectrodeColor,electrodeSize});
 %topoplot(zeros(1,numElectrodes),montageChanlocs,'electrodes','on','style','map','emarker2',{highPriorityElectrodeList,'o',highPriorityElectrodeColor,electrodeSize});
 topoplot([],montageChanlocs,'electrodes','labels','style','blank');
 
 if ~isempty(hStats)
     axes(hStats)
     set(hStats,'visible','off');
-    text(0.05,0.9,'bad Impedance','color',badImpedanceElectrodeColor);
-    text(0.05,0.75,num2str(badImpedanceElectrodes(:)'),'color',badImpedanceElectrodeColor);
-    
-    text(0.05,0.6,'Noisy','color',noisyElectrodeColor);
-    text(0.05,0.45,num2str(noisyElectrodes(:)'),'color',noisyElectrodeColor);
-    
-    text(0.05,0.3,'FlatPSD','color',flatPSDElectrodeColor);
-    text(0.05,0.15,num2str(flatPSDElectrodes(:)'),'color',flatPSDElectrodeColor);
-    
+    text(0.05,0.9,['badImpedance(' num2str(length(badImpedanceElectrodes)) ')'],'color',badImpedanceElectrodeColor);
+    text(0.05,0.7,['Noisy(' num2str(length(noisyElectrodes)) ')'],'color',noisyElectrodeColor);
+    text(0.05,0.5,['FlatPSD(' num2str(length(flatPSDElectrodes)) ')'],'color',flatPSDElectrodeColor);
+    text(0.05,0.3,['declaredBad(' num2str(length(declaredBadElectrodes)) ')'],'color',declaredBadElectrodeColor);
+    text(0.05,0.1,['All(' num2str(length(getAllBadElecs(badElectrodes))) ')'],'color',declaredBadElectrodeColor);
 end
 end
 function allBadElecs = getAllBadElecs(badElectrodes)
 if ~isempty(badElectrodes)
-    allBadElecs = [badElectrodes.badImpedanceElecs; badElectrodes.noisyElecs; badElectrodes.flatPSDElecs];
+    allBadElecs = unique([badElectrodes.badImpedanceElecs; badElectrodes.noisyElecs; badElectrodes.flatPSDElecs; badElectrodes.declaredBadElecs]);
 else
     allBadElecs = [];
 end
