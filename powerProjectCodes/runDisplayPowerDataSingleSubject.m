@@ -3,7 +3,7 @@ clear; close all
 [allSubjectNames,expDateList] = getDemographicDetails('BK1');
 [goodSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
 folderSourceString = 'N:\Projects\ProjectDhyaan\BK1';
-saveFolderName = 'Results';
+saveFolderName = 'powerResultsSingleSubject';
 
 saveFileFlag     = 1;
 plotRawTFFlag    = 0;
@@ -27,7 +27,7 @@ for i=1:length(useTheseIndices)
     subjectName = goodSubjectList{useTheseIndices(i)};
     disp(['Analyzing for the subject ' subjectName]);
     expDate = expDateList{strcmp(subjectName,allSubjectNames)};
-    displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag);
+    displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag);
 
     if saveFileFlag
         makeDirectory(saveFolderName);

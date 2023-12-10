@@ -3,7 +3,7 @@
 
 % badTrialRejectionFlag: 1: Don't reject badElectrodes, 2: reject badElectrodes for that protocol, 3: Reject badElectrodes of all protocols 
 
-function displayMeditationData(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
+function displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
 
 if ~exist('folderSourceString','var');    folderSourceString=[];        end
 if ~exist('badElectrodeList','var');      badTrialNameStr='_wo_v8';     end
