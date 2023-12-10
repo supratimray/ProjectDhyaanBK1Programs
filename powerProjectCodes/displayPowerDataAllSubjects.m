@@ -1,24 +1,30 @@
 % analysisChoice - 'st', 'bl' or 'combined'
+
+% refChoice - 'none' (show raw PSDs and power) or a protocolName. For
+% example, if refChoice is 'G1' then we use G1 baseline as reference.
+
 % badTrialRejectionFlag: 
 % 1: Don't reject badElectrodes
 % 2: Reject badElectrodes of protocolName
 % 3. Reject common badElectrodes of all protocols
 % 4: Reject badElectrodes of G1
 
-function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,useMedianFlag)
+function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,useMedianFlag)
 
-if ~exist('analysisChoice','var');        analysisChoice='st';          end
 if ~exist('protocolName','var');          protocolName='G1';            end
+if ~exist('analysisChoice','var');        analysisChoice='st';          end
+if ~exist('refChoice','var');             refChoice='none';             end
 if ~exist('badEyeCondition','var');       badEyeCondition='wo';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
 if ~exist('freqRangeList','var')       
     freqRangeList{1} = [8 13]; % alpha
-    freqRangeList{2} = [20 35]; % Slow gamma (SG)
-    freqRangeList{3} = [40 70]; % Fast gamma (FG)
-    freqRangeList{4} = [80 150]; % high-gamma (HG)
+    freqRangeList{2} = [22 70]; % Gamma
+    freqRangeList{3} = [80 150]; % high-gamma
 end
+freqLims = [0 70];
+
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 
 numFreqRanges = length(freqRangeList);
@@ -46,46 +52,53 @@ groupNameList{numGroups+1} = 'highPriority';
 numGroups=numGroups+1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Generate plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hPSD  = getPlotHandles(numGroups,1,[0.05 0.05 0.25 0.9],0.02,0.02,1);
-hPower = getPlotHandles(numGroups,numFreqRanges,[0.325 0.05 0.35 0.9],0.02,0.02,1);
-hTopo = getPlotHandles(numFreqRanges+2,2,[0.7 0.05 0.25 0.9],0.02,0.02,1); % First two plots show the layout and fraction of good subjects per electrode
+hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.7 0.4],0.02,0.02,1);
+hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.7 0.45],0.02,0.02,0);
+hTopo1 = getPlotHandles(2,2,[0.775 0.55 0.2 0.4],0.02,0.02,1);
+hTopo2 = getPlotHandles(numFreqRanges,2,[0.775 0.05 0.2 0.45],0.02,0.02,1);
 
-montageChanlocs = showElectrodeGroups(hTopo(1,:),capType,electrodeGroupList,groupNameList);
+montageChanlocs = showElectrodeGroups(hTopo1(1,:),capType,electrodeGroupList,groupNameList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 protocolNameList = [{'EO1'} {'EC1'} {'G1'} {'M1'} {'G2'} {'EO2'} {'EC2'} {'M2'}];
 protocolPos = find(strcmp(protocolNameList,protocolName));
 
+if ~strcmp(refChoice,'none')
+    protocolPosRef = find(strcmp(protocolNameList,refChoice));
+else
+    protocolPosRef = [];
+end
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cutoffNumTrials = 50;
-
 powerData = cell(1,2);
+powerDataRef = cell(1,2);
+
 for i=1:2
     powerDataTMP=[];
+    powerDataRefTMP=[];
 
     for j=1:length(subjectNameLists{i})
         subjectName = subjectNameLists{i}{j};
 
         tmpData = load(fullfile(saveFolderName,[subjectName '_' badEyeCondition '_' badTrialVersion '_' num2str(1000*stRange(1)) '_' num2str(1000*stRange(2))]));
-        numTrials = tmpData.numTrials(protocolPos);
         freqVals = tmpData.freqVals;
-        badElectrodes = getBadElectrodes(tmpData.badElectrodes,badElectrodeRejectionFlag,protocolPos);
 
-        if numTrials < cutoffNumTrials
+        tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag);
+        if isempty(tmpPower)
             disp(['Not enough trials for subject: ' subjectName]);
-        else
-            if strcmpi(analysisChoice,'st')
-                tmpPower = tmpData.psdValsST{protocolPos};
-            elseif strcmpi(analysisChoice,'bl')
-                tmpPower = tmpData.psdValsBL{protocolPos};
-            else
-                tmpPower = (tmpData.psdValsST{protocolPos}+tmpData.psdValsBL{protocolPos})/2; % average
+        end
+        powerDataTMP = cat(3,powerDataTMP,tmpPower);
+
+        if ~isempty(protocolPosRef)
+            tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag);
+            if isempty(tmpPowerRef)
+                disp(['Not enough trials for ref condition of subject: ' subjectName]);
             end
-            tmpPower(badElectrodes,:) = NaN;
-            powerDataTMP = cat(3,powerDataTMP,tmpPower);
+            powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
         end
     end
     powerData{i} = powerDataTMP;
+    powerDataRef{i} = powerDataRefTMP;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,7 +109,11 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Show Topoplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i=1:2
-    x=powerData{i};
+    if isempty(protocolPosRef)
+        x=powerData{i};
+    else
+        x=powerData{i} ./ powerDataRef{i};
+    end
     numSubjects = size(x,3);
     numElectrodes = size(x,1);
 
@@ -105,7 +122,8 @@ for i=1:2
     for j=1:numElectrodes
         numBadSubjects(j) = sum(isnan(squeeze(x(j,1,:))));
     end
-    axes(hTopo(2,i)); %#ok<*LAXES>
+    axes(hTopo1(2,i)); %#ok<*LAXES>
+
     % Modification in the topoplot code which allows us to not interpolate across electrodes.
     %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
     topoplot(100*(numBadSubjects/numSubjects),montageChanlocs,'maplimits',[0 100],'electrodes','on'); colorbar;
@@ -116,11 +134,16 @@ for i=1:2
 
     %%%%%%%%%%%%%%%%%%%%%%% Show topoplots of power %%%%%%%%%%%%%%%%%%%%%%%
     for j=1:numFreqRanges
-        axes(hTopo(2+j,i));
-        if useMedianFlag
-            data = squeeze(median(log10(sum(powerData{i}(:,freqPosList{j},:),2)),3,'omitnan'));
+        axes(hTopo2(j,i));
+        if isempty(protocolPosRef)
+            x = log10(sum(powerData{i}(:,freqPosList{j},:),2));
         else
-            data = squeeze(mean(log10(sum(powerData{i}(:,freqPosList{j},:),2)),3,'omitnan'));
+            x = 10*(log10(sum(powerData{i}(:,freqPosList{j},:),2)) - log10(sum(powerDataRef{i}(:,freqPosList{j},:),2)));
+        end
+        if useMedianFlag
+            data = squeeze(median(x,3,'omitnan'));
+        else
+            data = squeeze(mean(x,3,'omitnan'));
         end
         topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo); colorbar;
     end
@@ -131,6 +154,7 @@ cutoffNumElectrodes = 3;
 
 for i=1:numGroups
     meanPSDData = cell(1,2);
+    meanPSDDataRef = cell(1,2);
     logPSDData = cell(1,2);
     
     for j=1:2
@@ -138,39 +162,83 @@ for i=1:numGroups
         numGoodElecs = length(electrodeGroupList{i}) - sum(isnan(squeeze(pData(:,1,:))),1);
         badSubjectPos = find(numGoodElecs<=cutoffNumElectrodes);
         
+        if ~isempty(protocolPosRef)
+            pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
+            numGoodElecsRef = length(electrodeGroupList{i}) - sum(isnan(squeeze(pDataRef(:,1,:))),1);
+            badSubjectPosRef = find(numGoodElecsRef<=cutoffNumElectrodes);
+            badSubjectPos = unique(cat(2,badSubjectPos,badSubjectPosRef));
+        end
+
         if ~isempty(badSubjectPos)
             disp([groupNameList{i} ', ' titleStr{j} ', '  'Not enough good electrodes for ' num2str(length(badSubjectPos)) ' subjects.']);
             pData(:,:,badSubjectPos)=[];
+            if ~isempty(protocolPosRef)
+                pDataRef(:,:,badSubjectPos)=[];
+            end
         end
         meanPSDData{j} = squeeze(mean(pData,1,'omitnan'))';
-        logPSDData{j} = log10(meanPSDData{j});
 
-        text(freqVals(end)-50,yLimsPSD(2)-j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
+        if isempty(protocolPosRef)
+            logPSDData{j} = log10(meanPSDData{j});
+        else
+            meanPSDDataRef{j} = squeeze(mean(pDataRef,1,'omitnan'))';
+            logPSDData{j} = 10*(log10(meanPSDData{j}) - log10(meanPSDDataRef{j}));
+        end
+
+        text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
     end
     displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,1);
-    ylabel(groupNameList{i});
+    title(groupNameList{i});
+    xlim(hPSD(i),freqLims);
 
     % Violin plots for power 
     for j=1:numFreqRanges
         tmpLogPower = cell(1,2);
         for k=1:2
-            tmpLogPower{k} = log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2)));
+            if isempty(protocolPosRef)
+                tmpLogPower{k} = log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2)));
+            else
+                tmpLogPower{k} = 10*(log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2))) - log10(squeeze(sum(meanPSDDataRef{k}(:,freqPosList{j}),2))));
+            end
         end
-        axes(hPower(i,j));
+        axes(hPower(j,i));
         displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,0);
         if i==1
-            title(hPower(i,j),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
+            ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
         end
 
         % Add lines in PSD plots
         for k=1:2
             line([freqRangeList{j}(k) freqRangeList{j}(k)],yLimsPSD,'color',freqRangeColors(j,:),'parent',hPSD(i));
         end
+
+        if ~isempty(protocolPosRef)
+            line([0 freqVals(end)],[0 0],'color','k','parent',hPSD(i));
+        end
     end
 end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag)
+cutoffNumTrials = 50;
+
+numTrials = tmpData.numTrials(protocolPos);
+badElectrodes = getBadElectrodes(tmpData.badElectrodes,badElectrodeRejectionFlag,protocolPos);
+
+if numTrials < cutoffNumTrials
+    tmpPower = [];
+else
+    if strcmpi(analysisChoice,'st')
+        tmpPower = tmpData.psdValsST{protocolPos};
+    elseif strcmpi(analysisChoice,'bl')
+        tmpPower = tmpData.psdValsBL{protocolPos};
+    else
+        tmpPower = (tmpData.psdValsST{protocolPos}+tmpData.psdValsBL{protocolPos})/2; % average
+    end
+    tmpPower(badElectrodes,:) = NaN;
+end
+end
 function montageChanlocs = showElectrodeGroups(hPlots,capType,electrodeGroupList,groupNameList)
 
 %%%%%%%%%%%%%%%%%%%%%% Compare with Montage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -292,10 +360,10 @@ if displaySignificanceFlag % Do significance Testing
        clear xVals; xVals = [xBegPos xEndPos xEndPos xBegPos]';
        
        if (p<0.05)
-           patch(xVals,yVals,'k','linestyle','none');
+           patch(xVals,yVals,'c','linestyle','none');
        end
        if (p<0.01)
-           patch(xVals,yVals,'g','linestyle','none');
+           patch(xVals,yVals,'k','linestyle','none');
        end
    end
 end
