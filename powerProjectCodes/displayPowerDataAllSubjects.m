@@ -14,7 +14,7 @@ function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoic
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
 if ~exist('refChoice','var');             refChoice='none';             end
-if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
+if ~exist('badEyeCondition','var');       badEyeCondition='wo';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
@@ -227,8 +227,17 @@ for i=1:numGroups
                 tmpLogPower{k} = 10*(log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2))) - log10(squeeze(sum(meanPSDDataRef{k}(:,freqPosList{j}),2))));
             end
         end
-        axes(hPower(j,i));
-        displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,0);
+
+        % display violin plots for power
+        displaySettings.plotAxes = hPower(i,j);
+        if i==numGroups && j==1
+            displaySettings.showYTicks=1;
+            displaySettings.showXTicks=1;
+        else
+            displaySettings.showYTicks=0;
+            displaySettings.showXTicks=0;
+        end
+        displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,0,displaySettings);
         if i==1
             ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
         end
