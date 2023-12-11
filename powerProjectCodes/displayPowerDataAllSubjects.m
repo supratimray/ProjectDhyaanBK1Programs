@@ -14,14 +14,14 @@ function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoic
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
 if ~exist('refChoice','var');             refChoice='none';             end
-if ~exist('badEyeCondition','var');       badEyeCondition='wo';         end
+if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
 if ~exist('freqRangeList','var')       
     freqRangeList{1} = [8 13]; % alpha
-    freqRangeList{2} = [22 70]; % Gamma
-    freqRangeList{3} = [80 150]; % high-gamma
+    freqRangeList{2} = [22 34]; % SG
+    freqRangeList{3} = [35 65]; % FG
 end
 freqLims = [0 100];
 
@@ -229,7 +229,7 @@ for i=1:numGroups
         end
 
         % display violin plots for power
-        displaySettings.plotAxes = hPower(i,j);
+        displaySettings.plotAxes = hPower(j,i);
         if i==numGroups && j==1
             displaySettings.showYTicks=1;
             displaySettings.showXTicks=1;
