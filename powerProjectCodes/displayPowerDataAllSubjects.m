@@ -14,7 +14,7 @@ function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoic
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
 if ~exist('refChoice','var');             refChoice='none';             end
-if ~exist('badEyeCondition','var');       badEyeCondition='wo';         end
+if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
@@ -23,7 +23,7 @@ if ~exist('freqRangeList','var')
     freqRangeList{2} = [22 70]; % Gamma
     freqRangeList{3} = [80 150]; % high-gamma
 end
-freqLims = [0 70];
+freqLims = [0 100];
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 
@@ -45,17 +45,23 @@ gridType = 'EEG';
 capType = 'actiCap64_UOL';
 saveFolderName = 'savedData';
 
-[~,~,~,electrodeGroupList,groupNameList,highPriorityElectrodeNums] = electrodePositionOnGrid(1,gridType,[],capType);
+[~,~,~,electrodeGroupList0,groupNameList0,highPriorityElectrodeNums] = electrodePositionOnGrid(1,gridType,[],capType);
+
+% Combine some groups
+electrodeGroupList{1} = highPriorityElectrodeNums; % now called occipital
+groupNameList{1} = 'Occipital';
+electrodeGroupList{2} = [electrodeGroupList0{3} electrodeGroupList0{4}]; % Fronto-Central and Frontal
+groupNameList{2} = 'Frontal-Central';
+electrodeGroupList{3} = electrodeGroupList0{5}; % Temporal
+groupNameList{3} = groupNameList0{5};
+
 numGroups = length(electrodeGroupList);
-electrodeGroupList{numGroups+1} = highPriorityElectrodeNums;
-groupNameList{numGroups+1} = 'highPriority';
-numGroups=numGroups+1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Generate plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.7 0.4],0.02,0.02,1);
-hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.7 0.45],0.02,0.02,0);
-hTopo1 = getPlotHandles(2,2,[0.775 0.55 0.2 0.4],0.02,0.02,1);
-hTopo2 = getPlotHandles(numFreqRanges,2,[0.775 0.05 0.2 0.45],0.02,0.02,1);
+hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.4],0.02,0.02,1);
+hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
+hTopo1 = getPlotHandles(2,3,[0.675 0.55 0.3 0.4],0.02,0.02,1);
+hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
 
 montageChanlocs = showElectrodeGroups(hTopo1(1,:),capType,electrodeGroupList,groupNameList);
 
@@ -86,15 +92,17 @@ for i=1:2
         tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag);
         if isempty(tmpPower)
             disp(['Not enough trials for subject: ' subjectName]);
+        else
+            powerDataTMP = cat(3,powerDataTMP,tmpPower);
         end
-        powerDataTMP = cat(3,powerDataTMP,tmpPower);
-
+        
         if ~isempty(protocolPosRef)
             tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag);
             if isempty(tmpPowerRef)
                 disp(['Not enough trials for ref condition of subject: ' subjectName]);
+            else
+                powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
             end
-            powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
         end
     end
     powerData{i} = powerDataTMP;
@@ -108,6 +116,10 @@ for i = 1:numFreqRanges
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Show Topoplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+numElectrodes = size(powerData{1},1);
+percentData = zeros(2,numElectrodes);
+comparisonData = zeros(numFreqRanges,2,numElectrodes);
+
 for i=1:2
     if isempty(protocolPosRef)
         x=powerData{i};
@@ -115,7 +127,6 @@ for i=1:2
         x=powerData{i} ./ powerDataRef{i};
     end
     numSubjects = size(x,3);
-    numElectrodes = size(x,1);
 
     %%%%%%%%%%%% Show percent of bad subjects per electrode %%%%%%%%%%%%%%%
     numBadSubjects = zeros(1,numElectrodes);
@@ -126,7 +137,8 @@ for i=1:2
 
     % Modification in the topoplot code which allows us to not interpolate across electrodes.
     %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
-    topoplot(100*(numBadSubjects/numSubjects),montageChanlocs,'maplimits',[0 100],'electrodes','on'); colorbar;
+    percentData(i,:) = 100*(numBadSubjects/numSubjects);
+    topoplot(percentData(i,:),montageChanlocs,'maplimits',[0 100],'electrodes','on'); colorbar;
     title(titleStr{i},'color',displaySettings.colorNames(i,:));
     if i==1
         ylabel('Bad subjects (%)');
@@ -145,8 +157,22 @@ for i=1:2
         else
             data = squeeze(mean(x,3,'omitnan'));
         end
+        comparisonData(j,i,:) = data;
         topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo); colorbar;
     end
+end
+
+%%%%%%%%%%%%%%%%%%%%%% Plot the difference of topoplots %%%%%%%%%%%%%%%%%%%
+axes(hTopo1(2,3));
+topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on'); colorbar;
+
+for i=1:numFreqRanges
+    axes(hTopo2(i,3));
+    data = -diff(squeeze(comparisonData(i,:,:)));
+    if isempty(protocolPosRef)
+        data = 10*data;
+    end
+    topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo); colorbar;
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
