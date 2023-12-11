@@ -4,28 +4,40 @@
 % example, if refChoice is 'G1' then we use G1 baseline as reference.
 
 % badTrialRejectionFlag: 
-% 1: Don't reject badElectrodes
-% 2: Reject badElectrodes of protocolName
-% 3. Reject common badElectrodes of all protocols
-% 4: Reject badElectrodes of G1
+% 1: Reject badElectrodes of protocolName
+% 2. Reject common badElectrodes of all protocols
+% 3: Reject badElectrodes of G1
 
-function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,useMedianFlag)
+function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots)
 
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
 if ~exist('refChoice','var');             refChoice='none';             end
+
 if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
-if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
+if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=1;  end
+
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
-if ~exist('freqRangeList','var')       
+
+if ~exist('freqRangeList','var')    
     freqRangeList{1} = [8 13]; % alpha
     freqRangeList{2} = [22 34]; % SG
     freqRangeList{3} = [35 65]; % FG
 end
-freqLims = [0 100];
+if ~exist('axisRangeList','var')
+    axisRangeList{1} = [0 100];
+    axisRangeList{2} = [-2.5 2.5];
+    axisRangeList{3} = [-1.5 1.5];
+end
+if ~exist('cutoffList','var')
+    cutoffList = [5 50];
+end
+cutoffNumElectrodes = cutoffList(1);
+cutoffNumTrials = cutoffList(2);
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
+if ~exist('hAllPlots','var');             hAllPlots = [];               end
 
 numFreqRanges = length(freqRangeList);
 freqRangeColors = copper(numFreqRanges);
@@ -37,33 +49,35 @@ displaySettings.colorNames(1,:) = [1 0 0];
 displaySettings.colorNames(2,:) = [0 1 0];
 titleStr{1} = 'Meditators';
 titleStr{2} = 'Controls';
-cLimsTopo = [-1.5 1.5];
-yLimsPSD = [-2.5 2.5];
+
+freqLims = axisRangeList{1};
+yLimsPSD = axisRangeList{2};
+cLimsTopo = axisRangeList{3};
 
 %%%%%%%%%%%%%%%%%%%%%%%% Get electrode groups %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 gridType = 'EEG';
 capType = 'actiCap64_UOL';
 saveFolderName = 'savedData';
 
-[~,~,~,electrodeGroupList0,groupNameList0,highPriorityElectrodeNums] = electrodePositionOnGrid(1,gridType,[],capType);
-
-% Combine some groups
-electrodeGroupList{1} = highPriorityElectrodeNums; % now called occipital
-groupNameList{1} = 'Occipital';
-electrodeGroupList{2} = [electrodeGroupList0{3} electrodeGroupList0{4}]; % Fronto-Central and Frontal
-groupNameList{2} = 'Frontal-Central';
-electrodeGroupList{3} = electrodeGroupList0{5}; % Temporal
-groupNameList{3} = groupNameList0{5};
-
+[electrodeGroupList,groupNameList] = getElectrodeGroups(gridType,capType);
 numGroups = length(electrodeGroupList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Generate plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.4],0.02,0.02,1);
-hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
-hTopo1 = getPlotHandles(2,3,[0.675 0.55 0.3 0.4],0.02,0.02,1);
-hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
+if isempty(hAllPlots)
+    hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
+    hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
+    hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
+    hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
+    hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
+else
+    hPSD = hAllPlots.hPSD;
+    hPower = hAllPlots.hPower;
+    hTopo0 = hAllPlots.hTopo0;
+    hTopo1 = hAllPlots.hTopo1;
+    hTopo2 = hAllPlots.hTopo2;
+end
 
-montageChanlocs = showElectrodeGroups(hTopo1(1,:),capType,electrodeGroupList,groupNameList);
+montageChanlocs = showElectrodeGroups(hTopo0(1,:),capType,electrodeGroupList,groupNameList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 protocolNameList = [{'EO1'} {'EC1'} {'G1'} {'M1'} {'G2'} {'EO2'} {'EC2'} {'M2'}];
@@ -89,18 +103,22 @@ for i=1:2
         tmpData = load(fullfile(saveFolderName,[subjectName '_' badEyeCondition '_' badTrialVersion '_' num2str(1000*stRange(1)) '_' num2str(1000*stRange(2))]));
         freqVals = tmpData.freqVals;
 
-        tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag);
-        if isempty(tmpPower)
-            disp(['Not enough trials for subject: ' subjectName]);
-        else
-            powerDataTMP = cat(3,powerDataTMP,tmpPower);
-        end
-        
+        tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials);
         if ~isempty(protocolPosRef)
-            tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag);
-            if isempty(tmpPowerRef)
-                disp(['Not enough trials for ref condition of subject: ' subjectName]);
+            tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag,cutoffNumTrials);
+        end
+
+        if isempty(protocolPosRef) % No need to worry about Ref
+            if isempty(tmpPower)
+                disp(['Not enough trials for subject: ' subjectName]);
             else
+                powerDataTMP = cat(3,powerDataTMP,tmpPower);
+            end
+        else
+            if isempty(tmpPowerRef) || isempty(tmpPower) % If either one is empty
+                disp(['Not enough trials for protocol or ref condition of subject: ' subjectName]);
+            else
+                powerDataTMP = cat(3,powerDataTMP,tmpPower);
                 powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
             end
         end
@@ -133,7 +151,7 @@ for i=1:2
     for j=1:numElectrodes
         numBadSubjects(j) = sum(isnan(squeeze(x(j,1,:))));
     end
-    axes(hTopo1(2,i)); %#ok<*LAXES>
+    axes(hTopo1(i)); %#ok<*LAXES>
 
     % Modification in the topoplot code which allows us to not interpolate across electrodes.
     %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
@@ -163,7 +181,7 @@ for i=1:2
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plot the difference of topoplots %%%%%%%%%%%%%%%%%%%
-axes(hTopo1(2,3));
+axes(hTopo1(3));
 topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on'); colorbar;
 
 for i=1:numFreqRanges
@@ -176,8 +194,6 @@ for i=1:numFreqRanges
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cutoffNumElectrodes = 3;
-
 for i=1:numGroups
     meanPSDData = cell(1,2);
     meanPSDDataRef = cell(1,2);
@@ -255,8 +271,7 @@ end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag)
-cutoffNumTrials = 50;
+function tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials)
 
 numTrials = tmpData.numTrials(protocolPos);
 badElectrodes = getBadElectrodes(tmpData.badElectrodes,badElectrodeRejectionFlag,protocolPos);
@@ -305,17 +320,15 @@ end
 end
 function badElectrodes = getBadElectrodes(badElectrodeList,badElectrodeRejectionFlag,protocolPos)
 
-if badElectrodeRejectionFlag==1 % No bad electrodes
-    badElectrodes = [];
-elseif badElectrodeRejectionFlag==2 % Bad electrodes for the protocol
+if badElectrodeRejectionFlag==1 % Bad electrodes for the protocol
     badElectrodes = badElectrodeList{protocolPos};
-elseif badElectrodeRejectionFlag==3 % common bad electrodes for all protocols
+elseif badElectrodeRejectionFlag==2 % common bad electrodes for all protocols
     badElectrodes=[];
     for i=1:length(badElectrodeList)
         badElectrodes=cat(1,badElectrodes,badElectrodeList{i});
     end
     badElectrodes = unique(badElectrodes);
-elseif badElectrodeRejectionFlag==4 % Bad electrodes of G1
+elseif badElectrodeRejectionFlag==3 % Bad electrodes of G1
     badElectrodes = badElectrodeList{3};
 end
 end
