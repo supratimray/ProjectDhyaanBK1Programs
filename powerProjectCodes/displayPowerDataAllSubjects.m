@@ -156,7 +156,7 @@ for i=1:2
     % Modification in the topoplot code which allows us to not interpolate across electrodes.
     %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
     percentData(i,:) = 100*(numBadSubjects/numSubjects);
-    topoplot(percentData(i,:),montageChanlocs,'maplimits',[0 100],'electrodes','on'); colorbar;
+    topoplot(percentData(i,:),montageChanlocs,'maplimits',[0 100],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
     title(titleStr{i},'color',displaySettings.colorNames(i,:));
     if i==1
         ylabel('Bad subjects (%)');
@@ -176,7 +176,7 @@ for i=1:2
             data = squeeze(mean(x,3,'omitnan'));
         end
         comparisonData(j,i,:) = data;
-        topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo); colorbar;
+        topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
     end
 end
 
