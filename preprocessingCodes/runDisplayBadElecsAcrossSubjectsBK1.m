@@ -13,10 +13,10 @@ fh = figure(1);
 fh.WindowState = 'maximized';
 % dispForPairedSubject = 0; removeDeclaredBadElecs = 0; removeDeclaredBadSubjects = 0; % Use this option to get all 76 subjects and all electrodes
 % dispForPairedSubject = 0; removeDeclaredBadElecs = 1; removeDeclaredBadSubjects = 0; % Use this option to get all 76 subjects but remove the electrodes that are declared to be bad
-dispForPairedSubject = 0; removeDeclaredBadElecs = 1; removeDeclaredBadSubjects = 1; % Use this option to get 74 subjects and remove the electrodes that are declared to be bad
+dispForPairedSubject = 0; removeDeclaredBadElecs = 1; removeDeclaredBadSubjects = 1; % Use this option to get 74 subjects and remove the subjects that are declared to be bad
 
 sortByDate = 0;
-badElecThresoldBadSub = 0.50;
+badElecThresoldBadSub = 0.45; % original thresold 0.5
 badElecThresoldAcrossSubject = 0.35;
 
 % fixed variables
@@ -75,6 +75,7 @@ for s=1:numSubjects
         declaredBadElectrodes = getDeclaredBadElecs;
         badElecrodesIndex     = unique([badImpedanceElecs;noisyElecs;flatPSDElecs;declaredBadElectrodes']);
     else
+        declaredBadElectrodes = [];
         badElecrodesIndex = unique([badImpedanceElecs;noisyElecs;flatPSDElecs]);
     end
 
@@ -179,7 +180,7 @@ if sortByDate
 else
     badSubInd = find(badSubjectStatus==1);
     for b=1:length(badSubInd)
-        text(badSubInd(b)-xOffSet,yPos,['x (' num2str(badElecPercentage(badSubInd(b))) ')'],'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
+        text(badSubInd(b)-xOffSet,yPos,['x (' num2str(round(badElecPercentage(badSubInd(b)),2)) ')'],'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
         text(badSubInd(b)-xOffSet,yPos+2,goodSubjectList{badSubInd(b)},'Color','Red','FontSize',12,'FontWeight','bold','Parent',h1);
     end
 end
@@ -247,7 +248,7 @@ pairedDataFlag = dispForPairedSubject;
 
 fh2 = figure(2);
 fh2.WindowState = 'maximized';
-figHandles=displayViolinPlot(dataArray,colorArray,showData,plotQuartiles,showSignificance,pairedDataFlag);
+displayViolinPlot(dataArray,colorArray,showData,plotQuartiles,showSignificance,pairedDataFlag);
 ylabel('Num Bad Elecs');
 xticks(1:length(dataArray));
 xticklabels({'Meditators', 'Controls'});
