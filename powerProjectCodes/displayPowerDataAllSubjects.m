@@ -114,6 +114,7 @@ for i=1:2
         if isempty(protocolPosRef) % No need to worry about Ref
             if isempty(tmpPower)
                 disp(['Not enough trials for subject: ' subjectName]);
+                badSubPosTrialtmp = [badSubPosTrialtmp,j]; % as per the badtrialcuttoff
             else
                 powerDataTMP = cat(3,powerDataTMP,tmpPower);
             end
@@ -138,7 +139,9 @@ if pairedDataFlag
     for i=1:2
         badPosToRemove = find(ismember(goodSubInd{1,i},badSubPosCommon));
         powerData{i}(:,:,badPosToRemove)=[];
-        powerDataRef{i}(:,:,badPosToRemove) = [];
+        if ~strcmp(refChoice,'none')
+            powerDataRef{i}(:,:,badPosToRemove) = [];
+        end
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -212,6 +215,7 @@ for i=1:numGroups
     meanPSDData = cell(1,2);
     meanPSDDataRef = cell(1,2);
     logPSDData = cell(1,2);
+    badSubjectPos = [];
 
     for j=1:2
         pData = powerData{j}(electrodeGroupList{i},:,:);
@@ -244,16 +248,19 @@ for i=1:numGroups
         if ~pairedDataFlag
             text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
         end
-        goodSubInd{j} = setdiff(1:size(powerData{j},3),badSubjectPosRef);
+        goodSubInd{j} = setdiff(1:size(powerData{j},3),badSubjectPos);
+        badSubjectPosElec{j} = badSubjectPos;
     end
 
     if pairedDataFlag
-        badSubjectPosCommon = unique(badSubjectPos);
+        badSubjectPosCommon = union(badSubjectPosElec{1},badSubjectPosElec{2});
         for k=1:2
             badPosToRemove = find(ismember(goodSubInd{1,k},badSubjectPosCommon));
             logPSDData{k}(badPosToRemove,:) = [];
             meanPSDData{k}(badPosToRemove,:) = [];
-            meanPSDDataRef{k}(badPosToRemove,:) = [];
+            if ~strcmp(refChoice,'none')
+                meanPSDDataRef{k}(badPosToRemove,:) = [];
+            end
             text(30,yLimsPSD(2)-0.5*k,[titleStr{k} '(' num2str(size(logPSDData{k},1)) ')'],'color',displaySettings.colorNames(k,:),'parent',hPSD(i));
         end
     end
