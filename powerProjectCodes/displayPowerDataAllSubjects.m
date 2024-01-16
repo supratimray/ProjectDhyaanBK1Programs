@@ -3,12 +3,12 @@
 % refChoice - 'none' (show raw PSDs and power) or a protocolName. For
 % example, if refChoice is 'G1' then we use G1 baseline as reference.
 
-% badTrialRejectionFlag: 
+% badTrialRejectionFlag:
 % 1: Reject badElectrodes of protocolName
 % 2. Reject common badElectrodes of all protocols
 % 3: Reject badElectrodes of G1
 
-function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots)
+function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag)
 
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
@@ -20,7 +20,7 @@ if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=1;  end
 
 if ~exist('stRange','var');               stRange = [0.25 1.25];        end
 
-if ~exist('freqRangeList','var')    
+if ~exist('freqRangeList','var')
     freqRangeList{1} = [8 13]; % alpha
     freqRangeList{2} = [22 34]; % SG
     freqRangeList{3} = [35 65]; % FG
@@ -38,12 +38,13 @@ cutoffNumTrials = cutoffList(2);
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 if ~exist('hAllPlots','var');             hAllPlots = [];               end
+if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;               end
 
 numFreqRanges = length(freqRangeList);
 freqRangeColors = copper(numFreqRanges);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Display options %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-displaySettings.fontSizeLarge = 10; 
+displaySettings.fontSizeLarge = 10;
 displaySettings.tickLengthMedium = [0.025 0];
 displaySettings.colorNames(1,:) = [1 0 0];
 displaySettings.colorNames(2,:) = [0 1 0];
@@ -88,14 +89,16 @@ if ~strcmp(refChoice,'none')
 else
     protocolPosRef = [];
 end
-    
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 powerData = cell(1,2);
 powerDataRef = cell(1,2);
 
+
 for i=1:2
     powerDataTMP=[];
     powerDataRefTMP=[];
+    badSubPosTrialtmp = [];
 
     for j=1:length(subjectNameLists{i})
         subjectName = subjectNameLists{i}{j};
@@ -117,6 +120,7 @@ for i=1:2
         else
             if isempty(tmpPowerRef) || isempty(tmpPower) % If either one is empty
                 disp(['Not enough trials for protocol or ref condition of subject: ' subjectName]);
+                badSubPosTrialtmp = [badSubPosTrialtmp,j]; % as per the badtrialcuttoff
             else
                 powerDataTMP = cat(3,powerDataTMP,tmpPower);
                 powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
@@ -124,9 +128,19 @@ for i=1:2
         end
     end
     powerData{i} = powerDataTMP;
-    powerDataRef{i} = powerDataRefTMP;
+    powerDataRef{i}   = powerDataRefTMP;
+    goodSubInd{i}     = setdiff(1:length(subjectNameLists{i}),badSubPosTrialtmp);
+    badSubPosTrial{i} = badSubPosTrialtmp;
 end
 
+if pairedDataFlag
+    badSubPosCommon = union(badSubPosTrial{1,1},badSubPosTrial{1,2});
+    for i=1:2
+        badPosToRemove = find(ismember(goodSubInd{1,i},badSubPosCommon));
+        powerData{i}(:,:,badPosToRemove)=[];
+        powerDataRef{i}(:,:,badPosToRemove) = [];
+    end
+end
 %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
 freqPosList = cell(1,numFreqRanges);
 for i = 1:numFreqRanges
@@ -198,12 +212,12 @@ for i=1:numGroups
     meanPSDData = cell(1,2);
     meanPSDDataRef = cell(1,2);
     logPSDData = cell(1,2);
-    
+
     for j=1:2
         pData = powerData{j}(electrodeGroupList{i},:,:);
         numGoodElecs = length(electrodeGroupList{i}) - sum(isnan(squeeze(pData(:,1,:))),1);
         badSubjectPos = find(numGoodElecs<=cutoffNumElectrodes);
-        
+
         if ~isempty(protocolPosRef)
             pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
             numGoodElecsRef = length(electrodeGroupList{i}) - sum(isnan(squeeze(pDataRef(:,1,:))),1);
@@ -227,13 +241,28 @@ for i=1:numGroups
             logPSDData{j} = 10*(log10(meanPSDData{j}) - log10(meanPSDDataRef{j}));
         end
 
-        text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
+        if ~pairedDataFlag
+            text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
+        end
+        goodSubInd{j} = setdiff(1:size(powerData{j},3),badSubjectPosRef);
     end
+
+    if pairedDataFlag
+        badSubjectPosCommon = unique(badSubjectPos);
+        for k=1:2
+            badPosToRemove = find(ismember(goodSubInd{1,k},badSubjectPosCommon));
+            logPSDData{k}(badPosToRemove,:) = [];
+            meanPSDData{k}(badPosToRemove,:) = [];
+            meanPSDDataRef{k}(badPosToRemove,:) = [];
+            text(30,yLimsPSD(2)-0.5*k,[titleStr{k} '(' num2str(size(logPSDData{k},1)) ')'],'color',displaySettings.colorNames(k,:),'parent',hPSD(i));
+        end
+    end
+
     displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,1);
     title(groupNameList{i});
     xlim(hPSD(i),freqLims);
 
-    % Violin plots for power 
+    % Violin plots for power
     for j=1:numFreqRanges
         tmpLogPower = cell(1,2);
         for k=1:2
@@ -253,7 +282,7 @@ for i=1:numGroups
             displaySettings.showYTicks=0;
             displaySettings.showXTicks=0;
         end
-        displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,0,displaySettings);
+        displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,pairedDataFlag,displaySettings);
         if i==1
             ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
         end
@@ -349,14 +378,14 @@ numGroups = length(data);
 axes(hPlot);
 for i=1:numGroups
     clear bootStat mData sData
-    mData = getLoc(data{i}); 
+    mData = getLoc(data{i});
     if useMedianFlag
         bootStat = bootstrp(1000,getLoc,data{i});
         sData = std(bootStat);
     else
         sData = std(data{i},[],1)/sqrt(size(data{i},1));
     end
-    
+
     patch([xs';flipud(xs')],[mData'-sData';flipud(mData'+sData')],displaySettings.colorNames(i,:),'linestyle','none','FaceAlpha',0.4);
     hold on;
     plot(xs,mData,'color',displaySettings.colorNames(i,:),'linewidth',1);
@@ -372,47 +401,47 @@ else
 end
 
 if displaySignificanceFlag % Do significance Testing
-    
+
     allData = [];
     allIDs = [];
     for j=1:numGroups
         allData = cat(1,allData,data{j});
         allIDs = cat(1,allIDs,j+zeros(size(data{j},1),1));
     end
-       
-   for i=1:length(xs)
-       if useMedianFlag
-           p=kruskalwallis(allData(:,i),allIDs,'off');
-       else
-           if nonMatchedFlag
-               [~,p]=ttest2(data{1}(:,i),data{2}(:,i)); % only tests 2 groups
-           else
-               [~,p]=ttest(data{1}(:,i),data{2}(:,i)); % only tests 2 groups
-           end
-       end
-       % Get patch coordinates
-       yVals = yLims(1)+[0 0 diff(yLims)/20 diff(yLims)/20];
-       
-       clear xMidPos xBegPos xEndPos
-       xMidPos = xs(i);
-       if i==1
-           xBegPos = xMidPos;
-       else
-           xBegPos = xMidPos-(xs(i)-xs(i-1))/2; 
-       end
-       if i==length(xs)
-           xEndPos = xMidPos; 
-       else
-           xEndPos = xMidPos+(xs(i+1)-xs(i))/2; 
-       end
-       clear xVals; xVals = [xBegPos xEndPos xEndPos xBegPos]';
-       
-       if (p<0.05)
-           patch(xVals,yVals,'c','linestyle','none');
-       end
-       if (p<0.01)
-           patch(xVals,yVals,'k','linestyle','none');
-       end
-   end
+
+    for i=1:length(xs)
+        if useMedianFlag
+            p=kruskalwallis(allData(:,i),allIDs,'off');
+        else
+            if nonMatchedFlag
+                [~,p]=ttest2(data{1}(:,i),data{2}(:,i)); % only tests 2 groups
+            else
+                [~,p]=ttest(data{1}(:,i),data{2}(:,i)); % only tests 2 groups
+            end
+        end
+        % Get patch coordinates
+        yVals = yLims(1)+[0 0 diff(yLims)/20 diff(yLims)/20];
+
+        clear xMidPos xBegPos xEndPos
+        xMidPos = xs(i);
+        if i==1
+            xBegPos = xMidPos;
+        else
+            xBegPos = xMidPos-(xs(i)-xs(i-1))/2;
+        end
+        if i==length(xs)
+            xEndPos = xMidPos;
+        else
+            xEndPos = xMidPos+(xs(i+1)-xs(i))/2;
+        end
+        clear xVals; xVals = [xBegPos xEndPos xEndPos xBegPos]';
+
+        if (p<0.05)
+            patch(xVals,yVals,'c','linestyle','none');
+        end
+        if (p<0.01)
+            patch(xVals,yVals,'k','linestyle','none');
+        end
+    end
 end
 end

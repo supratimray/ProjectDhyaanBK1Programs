@@ -74,9 +74,9 @@ hFreqRangeMax = cell(1,numFreqRanges);
 for i=1:numFreqRanges
     uicontrol('Parent',hPanel4,'Unit','Normalized','Position',[0 1-i/numFreqRanges 0.5 1/numFreqRanges],'Style','text','String',['Freq Range' num2str(i)],'FontSize',fontSizeSmall);
     hFreqRangeMin{i} = uicontrol('Parent',hPanel4,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.5 1-i/numFreqRanges 0.25 1/numFreqRanges], ...
-    'Style','edit','String',num2str(freqRangeList0{i}(1)),'FontSize',fontSizeSmall);
+        'Style','edit','String',num2str(freqRangeList0{i}(1)),'FontSize',fontSizeSmall);
     hFreqRangeMax{i} = uicontrol('Parent',hPanel4,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.75 1-i/numFreqRanges 0.25 1/numFreqRanges], ...
-    'Style','edit','String',num2str(freqRangeList0{i}(2)),'FontSize',fontSizeSmall);
+        'Style','edit','String',num2str(freqRangeList0{i}(2)),'FontSize',fontSizeSmall);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Axis Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,9 +92,9 @@ hAxisRangeMax = cell(1,numAxisRanges);
 for i=1:numAxisRanges
     uicontrol('Parent',hPanel5,'Unit','Normalized','Position',[0 1-i/numAxisRanges 0.5 1/numAxisRanges],'Style','text','String',axisRangeName{i},'FontSize',fontSizeSmall);
     hAxisRangeMin{i} = uicontrol('Parent',hPanel5,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.5 1-i/numAxisRanges 0.25 1/numAxisRanges], ...
-    'Style','edit','String',num2str(axisRangeList0{i}(1)),'FontSize',fontSizeSmall);
+        'Style','edit','String',num2str(axisRangeList0{i}(1)),'FontSize',fontSizeSmall);
     hAxisRangeMax{i} = uicontrol('Parent',hPanel5,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.75 1-i/numAxisRanges 0.25 1/numAxisRanges], ...
-    'Style','edit','String',num2str(axisRangeList0{i}(2)),'FontSize',fontSizeSmall);
+        'Style','edit','String',num2str(axisRangeList0{i}(2)),'FontSize',fontSizeSmall);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Cutoff Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -107,7 +107,7 @@ hCutoffs = cell(1,numCutoffRanges);
 for i=1:numCutoffRanges
     uicontrol('Parent',hPanel6,'Unit','Normalized','Position',[0 1-i/numCutoffRanges 0.5 1/numCutoffRanges],'Style','text','String',cutoffNames{i},'FontSize',fontSizeSmall);
     hCutoffs{i} = uicontrol('Parent',hPanel6,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.5 1-i/numCutoffRanges 0.5 1/numCutoffRanges], ...
-    'Style','edit','String',num2str(cutoffList0(i)),'FontSize',fontSizeSmall);
+        'Style','edit','String',num2str(cutoffList0(i)),'FontSize',fontSizeSmall);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Plot Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -130,17 +130,19 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function plot_Callback(~,~)
 
-    %%%%%%%%%%%%%%%%%%%%% Get SubjectLists %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%% Get SubjectLists %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         comparisonStr=comparisonList{get(hComparison,'val')};
 
         if strcmp(comparisonStr,'paired')
             pairedSubjectNameList = getPairedSubjectsBK1;
             subjectNameLists{1} = pairedSubjectNameList(:,1);
             subjectNameLists{2} = pairedSubjectNameList(:,2);
+            pairedDataFlag      = 1;
         else
             [~, meditatorList, controlList] = getGoodSubjectsBK1;
             subjectNameLists{1} = meditatorList;
             subjectNameLists{2} = controlList;
+            pairedDataFlag      = 0;
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -151,7 +153,7 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
         badEyeCondition = badEyeConditionList2{get(hBadEye,'val')};
         badTrialVersion = badTrialVersionList{get(hBadTrialVersion,'val')};
         badElectrodeRejectionFlag = get(hBadElectrodeChoice,'val');
-        
+
         stRange = [0.25 1.25]; % hard coded for now
 
         freqRangeList = cell(1,numFreqRanges);
@@ -171,7 +173,7 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
 
         useMedianFlag = get(hUseMedianFlag,'val');
 
-        displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots);
+        displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag);
     end
     function cla_Callback(~,~)
         claGivenPlotHandle(hAllPlots.hPSD);
@@ -179,7 +181,7 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
         claGivenPlotHandle(hAllPlots.hTopo0);
         claGivenPlotHandle(hAllPlots.hTopo1);
         claGivenPlotHandle(hAllPlots.hTopo2);
-        
+
         function claGivenPlotHandle(plotHandles)
             [numRows,numCols] = size(plotHandles);
             for ii=1:numRows
