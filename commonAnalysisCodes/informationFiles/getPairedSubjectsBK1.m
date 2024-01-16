@@ -21,8 +21,9 @@ pairedSubjectNameList{9,1} = '015RK';  pairedSubjectNameList{9,2}  = '098GS'; % 
 pairedSubjectNameList{10,1} = '038DK'; pairedSubjectNameList{10,2} = '071GK'; % A-38, C-39
 
 % Male 40-44 
-pairedSubjectNameList{11,1} = '041AG'; pairedSubjectNameList{11,2} = '077LK';   % A-41, C-40 % Other options: 003S has more difference in education level
-pairedSubjectNameList{12,1} = '053DR'; pairedSubjectNameList{12,2} = '063VK';  % A-43, C-43 % Other options: 003S has more difference in age and education level
+pairedSubjectNameList{11,1} = '041AG'; pairedSubjectNameList{11,2} = '077LK';  % A-41, C-40 % Other options: 003S has more difference in education level
+pairedSubjectNameList{12,1} = '053DR'; pairedSubjectNameList{12,2} = '003S';   % A-43, C-43 % Other options: 063VK is better 'age-matched' but has too many bad electrodes 
+
 pairedSubjectNameList{13,1} = '045SP';  pairedSubjectNameList{13,2} = '078BM'; % A-47, C-48
 pairedSubjectNameList{14,1} = '025RK';  pairedSubjectNameList{14,2} = '070TB'; % A-49, C-49 % Other options: 078BM used earlier. 080RP has higher age differemce
 
