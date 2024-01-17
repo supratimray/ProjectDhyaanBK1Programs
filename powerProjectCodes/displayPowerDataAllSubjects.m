@@ -70,12 +70,15 @@ if isempty(hAllPlots)
     hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
     hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
     hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
+    figure(2);
+    hAllPlots.hTF=getPlotHandles(1,2,[0.1 0.1 0.85 0.7],0.03);
 else
     hPSD = hAllPlots.hPSD;
     hPower = hAllPlots.hPower;
     hTopo0 = hAllPlots.hTopo0;
     hTopo1 = hAllPlots.hTopo1;
     hTopo2 = hAllPlots.hTopo2;
+    hTF = hAllPlots.hTF;
 end
 
 montageChanlocs = showElectrodeGroups(hTopo0(1,:),capType,electrodeGroupList,groupNameList);
@@ -282,6 +285,12 @@ for i=1:numGroups
 
         % display violin plots for power
         displaySettings.plotAxes = hPower(j,i);
+        if pairedDataFlag
+            displaySettings.parametricTest = 1;
+        else
+            displaySettings.parametricTest = 0;
+        end
+
         if i==numGroups && j==1
             displaySettings.showYTicks=1;
             displaySettings.showXTicks=1;
@@ -302,6 +311,46 @@ for i=1:numGroups
         if ~isempty(protocolPosRef)
             line([0 freqVals(end)],[0 0],'color','k','parent',hPSD(i));
         end
+    end
+end
+
+[plotTfFlag,protocolIndex]=find(strcmp(protocolName,{'G1','G2','M2'}));
+
+if plotTfFlag
+    if ~exist('diffTf','var');         diffTf = 1;            end
+    if ~exist('badElecRejectionFlag','var');             badElecRejectionFlag = 1;               end
+    if ~exist('baselineRange','var');        baselineRange = [-1 0];               end
+    if ~exist('slowGammaRange','var');        slowGammaRange = [22 34];               end
+
+    for i = 1:2
+        subjectNameList = subjectNameLists{i};
+        [meanTFData,timeValsTF,freqValsTF] = getTFData(subjectNameList,protocolIndex,badElecRejectionFlag);
+        tfData = mean(meanTFData,3);
+        logP = log10(tfData);
+        baselinePower = mean(logP(timeValsTF>=baselineRange(1) & timeValsTF<=baselineRange(2),:));
+        if diffTf
+            pcolor(hTF(i),timeValsTF,freqValsTF,10*(logP'- repmat(baselinePower',1,length(timeValsTF))));
+        else
+            pcolor(hTF(i),timeValsTF,freqValsTF,logP');
+        end
+        shading(hTF(i),'interp'); colormap jet;
+        axes(hTF(i));
+        yline(slowGammaRange(1),'k--');
+        yline(slowGammaRange(2),'k--');
+        xlim(hTF(i),[-0.25 max(timeValsTF)]);
+        set(hTF(i), 'TickDir', 'out');
+        clim(hTF(i),[-2 2]);
+        ylim(hTF(i),[0 70]);
+        title(titleStr(i));
+
+        hc = colorbar('Position', [0.035 0.2 0.02 0.3]);
+        hc.FontSize         = 10;
+        hc.Label.FontSize   = 10;
+        hc.Label.FontWeight = 'bold';
+        hc.Label.String = ['\Delta Power' '(dB)'];
+
+        xlabel(hTF(1),'Time(s)');
+        ylabel(hTF(1),'Frequency (Hz)');
     end
 end
 end
@@ -450,5 +499,27 @@ if displaySignificanceFlag % Do significance Testing
             patch(xVals,yVals,'k','linestyle','none');
         end
     end
+end
+end
+
+function [meanTFData,timeValsTF,freqValsTF] = getTFData(subjectNameLists,protocolIndex,badElecRejectionFlag)
+meanTFData = [];
+for i=1:length(subjectNameLists)
+    subjectName = subjectNameLists{i};
+    disp(subjectName);
+    fileName = fullfile(pwd,'savedData',[subjectName '_ep_v8_TF.mat']);
+    load(fileName);
+    if badElecRejectionFlag
+        badElecToReject = badElectrodes{protocolIndex};
+        goodElecsInd    = not(ismember(electrodeList,badElecToReject));
+        if sum(goodElecsInd)>1
+            meanTfPowerTMP = squeeze(mean(tfPower{protocolIndex}(goodElecsInd,:,:),1));
+        else
+            meanTfPowerTMP = [];
+        end
+    else
+        meanTfPowerTMP = squeeze(mean(tfPower{protocolIndex}(:,:,:),1));
+    end
+    meanTFData = cat(3,meanTFData,meanTfPowerTMP);
 end
 end

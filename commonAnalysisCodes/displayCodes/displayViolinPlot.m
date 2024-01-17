@@ -3,21 +3,21 @@ function displayViolinPlot(dataArray,colorArray,showData,plotQuartiles,showSigni
 % adapted from "https://github.com/bastibe/Violinplot-Matlab"
 % Ref for violinplot: "stat.cmu.edu/~rnugent/PCMI2016/papers/ViolinPlots.pdf"
 
-if ~exist('displaySettings','var');               displaySettings=struct();            end
-if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;          end
-if ~isfield(displaySettings,'dataMarkerSize');    displaySettings.dataMarkerSize=12;   end
-if ~isfield(displaySettings,'medianMarkerSize');  displaySettings.medianMarkerSize=15; end
-if ~isfield(displaySettings,'textFontSize');      displaySettings.textFontSize=8; end
-if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=0.5; end
-if ~isfield(displaySettings,'xPositionText');     displaySettings.xPositionText=0.15; end
-if ~isfield(displaySettings,'plotAxes');          displaySettings.plotAxes=gca; end
-if ~isfield(displaySettings,'showYTicks');        displaySettings.showYTicks=0; end
-if ~isfield(displaySettings,'setYLim');           displaySettings.setYLim=[-7 7]; end
-if ~isfield(displaySettings,'commonYLim');        displaySettings.commonYLim=0; end
-if ~isfield(displaySettings,'showXTicks');        displaySettings.showXTicks=1; end
-if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{'M'},{'C'}]; end
-if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=0; end
-if ~isfield(displaySettings,'tickLengthMedium');  displaySettings.tickLengthMedium=[0.025 0]; end
+if ~exist('displaySettings','var');               displaySettings=struct();                     end
+if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;                    end
+if ~isfield(displaySettings,'dataMarkerSize');    displaySettings.dataMarkerSize=12;            end
+if ~isfield(displaySettings,'medianMarkerSize');  displaySettings.medianMarkerSize=15;          end
+if ~isfield(displaySettings,'textFontSize');      displaySettings.textFontSize=8;               end
+if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=0.5;            end
+if ~isfield(displaySettings,'xPositionText');     displaySettings.xPositionText=0.15;           end
+if ~isfield(displaySettings,'plotAxes');          displaySettings.plotAxes=gca;                 end
+if ~isfield(displaySettings,'showYTicks');        displaySettings.showYTicks=0;                 end
+if ~isfield(displaySettings,'setYLim');           displaySettings.setYLim=[-7 7];               end
+if ~isfield(displaySettings,'commonYLim');        displaySettings.commonYLim=0;                 end
+if ~isfield(displaySettings,'showXTicks');        displaySettings.showXTicks=1;                 end
+if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{'M'},{'C'}];    end
+if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=0;             end
+if ~isfield(displaySettings,'tickLengthMedium');  displaySettings.tickLengthMedium=[0.025 0];   end
 
 % get the data in the cell array
 Y{:,1}=dataArray{1,1};

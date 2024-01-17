@@ -30,7 +30,7 @@ badTrialVersion = 'v8';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Save data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 useTheseIndices = 1:length(goodSubjectList);
-timeRange = [-1 1];
+timeRange = [-1 1.25];
 
 %%%%%%%%%%%%%%%%%%%%%% Get TF data for the protocols where stimulus was presented %%%%%%%%%%%%%%%%%%%%%
 gridType = 'EEG';

@@ -65,9 +65,10 @@ for i=1:numPairs
         end
 
         % Add labels
+        axes(hTF(i,j));
         shading(hTF(i,j),'interp'); colormap jet;
-        yline(hTF(i,j),slowGammaRange(1),'k--');
-        yline(hTF(i,j),slowGammaRange(2),'k--');
+        yline(slowGammaRange(1),'k--');
+        yline(slowGammaRange(2),'k--');
         text(-0.2,50,[num2str(ageListPaired(i,j)) 'Yrs'],'Parent',hTF(i,j));
         xlim(hTF(i,j),[-0.25 max(timeValsTF)]);
         set(hTF(i,j), 'TickDir', 'out');

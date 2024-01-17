@@ -4,9 +4,10 @@ function runDisplayPowerDataAllSubjects
 
 fontSizeSmall = 10; fontSizeMedium = 12; fontSizeLarge = 16;
 backgroundColor = 'w'; panelHeight = 0.125;
+colormap jet
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Subject Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+figure(1);
 hPanel1 = uipanel('Title','Subjects','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.025 1-panelHeight 0.15 panelHeight]);
 
 % Comparison - paired or unpaired
@@ -127,14 +128,17 @@ hAllPlots.hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
 hAllPlots.hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
 hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
 
+% add TF plots
+figure(2);
+hAllPlots.hTF=getPlotHandles(1,2,[0.1 0.1 0.85 0.7],0.03);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function plot_Callback(~,~)
 
         %%%%%%%%%%%%%%%%%%%%% Get SubjectLists %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         comparisonStr=comparisonList{get(hComparison,'val')};
-
         if strcmp(comparisonStr,'paired')
-            pairedSubjectNameList = getPairedSubjectsBK1;
+            pairedSubjectNameList = getPairedSubjectsBK1;            
             subjectNameLists{1} = pairedSubjectNameList(:,1);
             subjectNameLists{2} = pairedSubjectNameList(:,2);
             pairedDataFlag      = 1;
@@ -143,6 +147,33 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
             subjectNameLists{1} = meditatorList;
             subjectNameLists{2} = controlList;
             pairedDataFlag      = 0;
+        end
+
+        % Sub-select Subjects based on Demographics
+        [subjectNameList,~,~,ageListAllSub,genderListAllSub] = getDemographicDetails('BK1');
+        % sub-select based on Gender
+        genderStr=genderList{get(hGender,'Value')};
+        maleSubjectNameList = subjectNameList(strcmpi(genderListAllSub, 'M'));
+        femaleSubjectNameList = subjectNameList(strcmpi(genderListAllSub, 'F'));
+        if  strcmp(genderStr,'male')
+            subjectNameLists{1} = intersect(subjectNameLists{1},maleSubjectNameList,'stable');
+            subjectNameLists{2} = intersect(subjectNameLists{2},maleSubjectNameList,'stable');
+        elseif strcmp(genderStr,'female')
+            subjectNameLists{1} = intersect(subjectNameLists{1},femaleSubjectNameList,'stable');
+            subjectNameLists{2} = intersect(subjectNameLists{2},femaleSubjectNameList,'stable');
+        end
+
+        % sub-select based on Age
+        ageStr=ageList{get(hAge,'Value')};
+        youngSubjectNameList = subjectNameList(ageListAllSub<40);
+        midSubjectNameList = subjectNameList(ageListAllSub>=40);
+
+        if  strcmp(ageStr,'young')
+            subjectNameLists{1} = intersect(subjectNameLists{1},youngSubjectNameList,'stable');
+            subjectNameLists{2} = intersect(subjectNameLists{2},youngSubjectNameList,'stable');
+        elseif strcmp(ageStr,'mid')
+            subjectNameLists{1} = intersect(subjectNameLists{1},midSubjectNameList,'stable');
+            subjectNameLists{2} = intersect(subjectNameLists{2},midSubjectNameList,'stable');
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -181,6 +212,7 @@ hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.0
         claGivenPlotHandle(hAllPlots.hTopo0);
         claGivenPlotHandle(hAllPlots.hTopo1);
         claGivenPlotHandle(hAllPlots.hTopo2);
+        claGivenPlotHandle(hAllPlots.hTF);
 
         function claGivenPlotHandle(plotHandles)
             [numRows,numCols] = size(plotHandles);
