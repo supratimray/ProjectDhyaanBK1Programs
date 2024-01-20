@@ -123,12 +123,12 @@ electrodeGroupList = getElectrodeGroups('EEG','actiCap64_UOL');
 numGroups = length(electrodeGroupList);
 hAllPlots.hPSD  =  getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
 hAllPlots.hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
-hAllPlots.hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.12 0.15],0.002,0.002,1);
-hAllPlots.hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
-hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
+hAllPlots.hTopo0 = getPlotHandles(1,2,[0.66 0.7 0.12 0.15],0.002,0.002,1);
+hAllPlots.hTopo1 = getPlotHandles(1,3,[0.66 0.55 0.3 0.13],0.02,0.02,1);
+hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.66 0.05 0.3 0.45],0.02,0.02,1);
 
 % add TF plots
-hAllPlots.hTF=getPlotHandles(1,2,[0.825 0.7 0.15 0.15],0.01);
+hAllPlots.hTF=getPlotHandles(1,2,[0.8 0.7 0.15 0.15],0.01);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function plot_Callback(~,~)

@@ -342,7 +342,8 @@ if plotTfFlag
         ylim(hTF(i),[0 70]);
         title(titleStr(i));
 
-        hc = colorbar('Position', [0.97 0.7 0.01 0.15]);
+        tmpPosition = get(hTF(2),'Position');
+        hc = colorbar('Position', [tmpPosition(1)+tmpPosition(3)+0.01 tmpPosition(2) 0.01 tmpPosition(4)]);
         hc.FontSize         = 10;
         hc.Label.FontSize   = 10;
         hc.Label.FontWeight = 'bold';
