@@ -7,7 +7,6 @@ backgroundColor = 'w'; panelHeight = 0.125;
 colormap jet
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Subject Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure(1);
 hPanel1 = uipanel('Title','Subjects','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.025 1-panelHeight 0.15 panelHeight]);
 
 % Comparison - paired or unpaired
@@ -65,7 +64,7 @@ hBadElectrodeChoice = uicontrol('Parent',hPanel3,'Unit','Normalized','Background
 %%%%%%%%%%%%%%%%%%%%%%%%% Freq Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel4 = uipanel('Title','Freq Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.475 1-panelHeight 0.15 panelHeight]);
 freqRangeList0{1} = [8 13];
-freqRangeList0{2} = [22 34];
+freqRangeList0{2} = [24 34];
 freqRangeList0{3} = [35 65];
 
 numFreqRanges = length(freqRangeList0);
@@ -100,7 +99,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Cutoff Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel6 = uipanel('Title','Cutoffs','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.775 1-panelHeight 0.1 panelHeight]);
-cutoffList0 = [3 50]; cutoffNames = [{'Num Elecs'} {'Num Trials'}];
+cutoffList0 = [3 30]; cutoffNames = [{'Num Elecs'} {'Num Trials'}];
 
 numCutoffRanges = length(cutoffList0);
 hCutoffs = cell(1,numCutoffRanges);
@@ -124,13 +123,12 @@ electrodeGroupList = getElectrodeGroups('EEG','actiCap64_UOL');
 numGroups = length(electrodeGroupList);
 hAllPlots.hPSD  =  getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
 hAllPlots.hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
-hAllPlots.hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
+hAllPlots.hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.12 0.15],0.002,0.002,1);
 hAllPlots.hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
 hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
 
 % add TF plots
-figure(2);
-hAllPlots.hTF=getPlotHandles(1,2,[0.1 0.1 0.85 0.7],0.03);
+hAllPlots.hTF=getPlotHandles(1,2,[0.825 0.7 0.15 0.15],0.01);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function plot_Callback(~,~)

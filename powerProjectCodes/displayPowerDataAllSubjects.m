@@ -22,7 +22,7 @@ if ~exist('stRange','var');               stRange = [0.25 1.25];        end
 
 if ~exist('freqRangeList','var')
     freqRangeList{1} = [8 13]; % alpha
-    freqRangeList{2} = [22 34]; % SG
+    freqRangeList{2} = [24 34]; % SG
     freqRangeList{3} = [35 65]; % FG
 end
 if ~exist('axisRangeList','var')
@@ -31,14 +31,14 @@ if ~exist('axisRangeList','var')
     axisRangeList{3} = [-1.5 1.5];
 end
 if ~exist('cutoffList','var')
-    cutoffList = [5 50];
+    cutoffList = [3 30];
 end
 cutoffNumElectrodes = cutoffList(1);
 cutoffNumTrials = cutoffList(2);
 
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 if ~exist('hAllPlots','var');             hAllPlots = [];               end
-if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;               end
+if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;           end
 
 numFreqRanges = length(freqRangeList);
 freqRangeColors = copper(numFreqRanges);
@@ -96,7 +96,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 powerData = cell(1,2);
 powerDataRef = cell(1,2);
-
 
 for i=1:2
     powerDataTMP=[];
@@ -202,7 +201,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%% Plot the difference of topoplots %%%%%%%%%%%%%%%%%%%
 axes(hTopo1(3));
-topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on'); colorbar;
+topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
 
 for i=1:numFreqRanges
     axes(hTopo2(i,3));
@@ -210,7 +209,7 @@ for i=1:numFreqRanges
     if isempty(protocolPosRef)
         data = 10*data;
     end
-    topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo); colorbar;
+    topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -343,7 +342,7 @@ if plotTfFlag
         ylim(hTF(i),[0 70]);
         title(titleStr(i));
 
-        hc = colorbar('Position', [0.035 0.2 0.02 0.3]);
+        hc = colorbar('Position', [0.97 0.7 0.01 0.15]);
         hc.FontSize         = 10;
         hc.Label.FontSize   = 10;
         hc.Label.FontWeight = 'bold';
@@ -393,9 +392,9 @@ numElectrodeGroups = length(electrodeGroupList);
 electrodeGroupColorList = jet(numElectrodeGroups);
 
 for i=1:numElectrodeGroups
-    topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{electrodeGroupList{i},'o',electrodeGroupColorList(i,:),electrodeSize});
+    topoplot(zeros(1,numElectrodes),montageChanlocs,'maplimits',[-1 1],'electrodes','on','style','map','emarker2',{electrodeGroupList{i},'o',electrodeGroupColorList(i,:),electrodeSize},'plotrad',0.6,'headrad',0.6);
 end
-topoplot([],montageChanlocs,'electrodes','labels','style','blank');
+topoplot([],montageChanlocs,'electrodes','labels','style','blank','plotrad',0.6,'headrad',0.6);
 
 axes(hPlots(2))
 set(hPlots(2),'visible','off');
@@ -506,7 +505,7 @@ function [meanTFData,timeValsTF,freqValsTF] = getTFData(subjectNameLists,protoco
 meanTFData = [];
 for i=1:length(subjectNameLists)
     subjectName = subjectNameLists{i};
-    disp(subjectName);
+    %disp(subjectName);
     fileName = fullfile(pwd,'savedData',[subjectName '_ep_v8_TF.mat']);
     load(fileName);
     if badElecRejectionFlag
