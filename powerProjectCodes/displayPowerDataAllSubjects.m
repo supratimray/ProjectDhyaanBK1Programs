@@ -78,7 +78,6 @@ else
     hTopo0 = hAllPlots.hTopo0;
     hTopo1 = hAllPlots.hTopo1;
     hTopo2 = hAllPlots.hTopo2;
-    hTF = hAllPlots.hTF;
 end
 
 montageChanlocs = showElectrodeGroups(hTopo0(1,:),capType,electrodeGroupList,groupNameList);
@@ -94,58 +93,9 @@ else
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-powerData = cell(1,2);
-powerDataRef = cell(1,2);
+goodSubjectNameLists = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName);
+[powerData,powerDataRef,freqVals] = getPowerDataAllSubjects(goodSubjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,saveFolderName);
 
-for i=1:2
-    powerDataTMP=[];
-    powerDataRefTMP=[];
-    badSubPosTrialtmp = [];
-
-    for j=1:length(subjectNameLists{i})
-        subjectName = subjectNameLists{i}{j};
-
-        tmpData = load(fullfile(saveFolderName,[subjectName '_' badEyeCondition '_' badTrialVersion '_' num2str(1000*stRange(1)) '_' num2str(1000*stRange(2))]));
-        freqVals = tmpData.freqVals;
-
-        tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials);
-        if ~isempty(protocolPosRef)
-            tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag,cutoffNumTrials);
-        end
-
-        if isempty(protocolPosRef) % No need to worry about Ref
-            if isempty(tmpPower)
-                disp(['Not enough trials for subject: ' subjectName]);
-                badSubPosTrialtmp = [badSubPosTrialtmp,j]; % as per the badtrialcuttoff
-            else
-                powerDataTMP = cat(3,powerDataTMP,tmpPower);
-            end
-        else
-            if isempty(tmpPowerRef) || isempty(tmpPower) % If either one is empty
-                disp(['Not enough trials for protocol or ref condition of subject: ' subjectName]);
-                badSubPosTrialtmp = [badSubPosTrialtmp,j]; % as per the badtrialcuttoff
-            else
-                powerDataTMP = cat(3,powerDataTMP,tmpPower);
-                powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
-            end
-        end
-    end
-    powerData{i} = powerDataTMP;
-    powerDataRef{i}   = powerDataRefTMP;
-    goodSubInd{i}     = setdiff(1:length(subjectNameLists{i}),badSubPosTrialtmp);
-    badSubPosTrial{i} = badSubPosTrialtmp;
-end
-
-if pairedDataFlag
-    badSubPosCommon = union(badSubPosTrial{1,1},badSubPosTrial{1,2});
-    for i=1:2
-        badPosToRemove = find(ismember(goodSubInd{1,i},badSubPosCommon));
-        powerData{i}(:,:,badPosToRemove)=[];
-        if ~strcmp(refChoice,'none')
-            powerDataRef{i}(:,:,badPosToRemove) = [];
-        end
-    end
-end
 %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
 freqPosList = cell(1,numFreqRanges);
 for i = 1:numFreqRanges
@@ -213,25 +163,43 @@ for i=1:numFreqRanges
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-for i=1:numGroups
-    meanPSDData = cell(1,2);
-    meanPSDDataRef = cell(1,2);
-    logPSDData = cell(1,2);
-    badSubjectPos = [];
 
+for i=1:numGroups
+
+    %%%%%%%%%%%%% Find bad subjects based on electrode cutoff %%%%%%%%%%%%%
+    badSubjectPosList = cell(1,2);
     for j=1:2
         pData = powerData{j}(electrodeGroupList{i},:,:);
         numGoodElecs = length(electrodeGroupList{i}) - sum(isnan(squeeze(pData(:,1,:))),1);
-        badSubjectPos = find(numGoodElecs<=cutoffNumElectrodes);
+        badSubjectPosList{j} = find(numGoodElecs<=cutoffNumElectrodes);
 
         if ~isempty(protocolPosRef)
             pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
             numGoodElecsRef = length(electrodeGroupList{i}) - sum(isnan(squeeze(pDataRef(:,1,:))),1);
             badSubjectPosRef = find(numGoodElecsRef<=cutoffNumElectrodes);
-            badSubjectPos = unique(cat(2,badSubjectPos,badSubjectPosRef));
+            badSubjectPosList{j} = unique(cat(2,badSubjectPosList{j},badSubjectPosRef));
         end
+    end
 
-        if ~isempty(badSubjectPos)
+    % if paired dataset, take common bad subjects
+    if pairedDataFlag
+        badSubjectPosList{1} = union(badSubjectPosList{1},badSubjectPosList{2});
+        badSubjectPosList{2} = badSubjectPosList{1};
+    end
+
+    % Get data
+    meanPSDData = cell(1,2);
+    meanPSDDataRef = cell(1,2);
+    logPSDData = cell(1,2);
+
+    for j=1:2
+        pData = powerData{j}(electrodeGroupList{i},:,:);
+        if ~isempty(protocolPosRef)
+            pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
+        end
+        badSubjectPos = badSubjectPosList{j};
+
+        if ~isempty(badSubjectPos)       
             disp([groupNameList{i} ', ' titleStr{j} ', '  'Not enough good electrodes for ' num2str(length(badSubjectPos)) ' subjects.']);
             pData(:,:,badSubjectPos)=[];
             if ~isempty(protocolPosRef)
@@ -247,27 +215,10 @@ for i=1:numGroups
             logPSDData{j} = 10*(log10(meanPSDData{j}) - log10(meanPSDDataRef{j}));
         end
 
-        if ~pairedDataFlag
-            text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
-        end
-        goodSubInd{j} = setdiff(1:size(powerData{j},3),badSubjectPos);
-        badSubjectPosElec{j} = badSubjectPos;
+        text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
     end
 
-    if pairedDataFlag
-        badSubjectPosCommon = union(badSubjectPosElec{1},badSubjectPosElec{2});
-        for k=1:2
-            badPosToRemove = find(ismember(goodSubInd{1,k},badSubjectPosCommon));
-            logPSDData{k}(badPosToRemove,:) = [];
-            meanPSDData{k}(badPosToRemove,:) = [];
-            if ~strcmp(refChoice,'none')
-                meanPSDDataRef{k}(badPosToRemove,:) = [];
-            end
-            text(30,yLimsPSD(2)-0.5*k,[titleStr{k} '(' num2str(size(logPSDData{k},1)) ')'],'color',displaySettings.colorNames(k,:),'parent',hPSD(i));
-        end
-    end
-
-    displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,1);
+    displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,~pairedDataFlag);
     title(groupNameList{i});
     xlim(hPSD(i),freqLims);
 
@@ -284,7 +235,7 @@ for i=1:numGroups
 
         % display violin plots for power
         displaySettings.plotAxes = hPower(j,i);
-        if pairedDataFlag
+        if ~useMedianFlag
             displaySettings.parametricTest = 1;
         else
             displaySettings.parametricTest = 0;
@@ -312,50 +263,101 @@ for i=1:numGroups
         end
     end
 end
-
-[plotTfFlag,protocolIndex]=find(strcmp(protocolName,{'G1','G2','M2'}));
-
-if plotTfFlag
-    if ~exist('diffTf','var');         diffTf = 1;            end
-    if ~exist('badElecRejectionFlag','var');             badElecRejectionFlag = 1;               end
-    if ~exist('baselineRange','var');        baselineRange = [-1 0];               end
-    if ~exist('slowGammaRange','var');        slowGammaRange = [22 34];               end
-
-    for i = 1:2
-        subjectNameList = subjectNameLists{i};
-        [meanTFData,timeValsTF,freqValsTF] = getTFData(subjectNameList,protocolIndex,badElecRejectionFlag);
-        tfData = mean(meanTFData,3);
-        logP = log10(tfData);
-        baselinePower = mean(logP(timeValsTF>=baselineRange(1) & timeValsTF<=baselineRange(2),:));
-        if diffTf
-            pcolor(hTF(i),timeValsTF,freqValsTF,10*(logP'- repmat(baselinePower',1,length(timeValsTF))));
-        else
-            pcolor(hTF(i),timeValsTF,freqValsTF,logP');
-        end
-        shading(hTF(i),'interp'); colormap jet;
-        axes(hTF(i));
-        yline(slowGammaRange(1),'k--');
-        yline(slowGammaRange(2),'k--');
-        xlim(hTF(i),[-0.25 max(timeValsTF)]);
-        set(hTF(i), 'TickDir', 'out');
-        clim(hTF(i),[-2 2]);
-        ylim(hTF(i),[0 70]);
-        title(titleStr(i));
-
-        tmpPosition = get(hTF(2),'Position');
-        hc = colorbar('Position', [tmpPosition(1)+tmpPosition(3)+0.01 tmpPosition(2) 0.01 tmpPosition(4)]);
-        hc.FontSize         = 10;
-        hc.Label.FontSize   = 10;
-        hc.Label.FontWeight = 'bold';
-        hc.Label.String = ['\Delta Power' '(dB)'];
-
-        xlabel(hTF(1),'Time(s)');
-        ylabel(hTF(1),'Frequency (Hz)');
-    end
-end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function goodSubjectNameLists = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName)
+
+% For unpaired case, subjects can be rejected if either data in analysis or
+% ref period is bad. For paired case, a pair is rejected even if one of the two
+% subjects in the pair is bad. Based on the condition, we get a new good
+% subject list.
+
+badSubjectIndex = cell(1,2);
+badSubjectIndexRef = cell(1,2);
+
+for i=1:2
+    numSubjects = length(subjectNameLists{i});
+    badSubjectIndexTMP = zeros(1,numSubjects);
+    badSubjectIndexRefTMP = zeros(1,numSubjects);
+
+    for j=1:numSubjects
+        subjectName = subjectNameLists{i}{j};
+
+        tmpData = load(fullfile(saveFolderName,[subjectName '_' badEyeCondition '_' badTrialVersion '_' num2str(1000*stRange(1)) '_' num2str(1000*stRange(2))]));
+
+        if isempty(getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials))
+            disp(['Not enough trials for subject: ' subjectName]);
+            badSubjectIndexTMP(j)=1;
+        end
+
+        if ~isempty(protocolPosRef)
+            if isempty(getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag,cutoffNumTrials))
+                disp(['Not enough trials in ref period for subject: ' subjectName]);
+                badSubjectIndexRefTMP(j)=1;
+            end
+        end
+    end
+    badSubjectIndex{i} = badSubjectIndexTMP;
+    badSubjectIndexRef{i} = badSubjectIndexRefTMP;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%% Now find good subjects %%%%%%%%%%%%%%%%%%%%%%%%%%
+goodSubjectNameLists = cell(1,2);
+
+if ~pairedDataFlag
+    for i=1:2
+        subjectNameListTMP = subjectNameLists{i};
+        if isempty(protocolPosRef)
+            badPos = find(badSubjectIndex{i});
+        else
+            badPos = union(find(badSubjectIndex{i}),find(badSubjectIndexRef{i}));
+        end
+        subjectNameListTMP(badPos)=[];
+        goodSubjectNameLists{i} = subjectNameListTMP;
+    end
+else
+    
+    if isempty(protocolPosRef)
+        badPos = find(sum(cell2mat(badSubjectIndex')));
+    else
+        badPos = union(find(sum(cell2mat(badSubjectIndex'))),find(sum(cell2mat(badSubjectIndexRef'))));
+    end
+
+    for i=1:2
+        subjectNameListTMP = subjectNameLists{i};
+        subjectNameListTMP(badPos)=[];
+        goodSubjectNameLists{i} = subjectNameListTMP;
+    end
+end
+end
+function [powerData,powerDataRef,freqVals] = getPowerDataAllSubjects(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,saveFolderName)
+
+powerData = cell(1,2);
+powerDataRef = cell(1,2);
+
+for i=1:2
+    powerDataTMP=[];
+    powerDataRefTMP=[];
+
+    for j=1:length(subjectNameLists{i})
+        subjectName = subjectNameLists{i}{j};
+
+        tmpData = load(fullfile(saveFolderName,[subjectName '_' badEyeCondition '_' badTrialVersion '_' num2str(1000*stRange(1)) '_' num2str(1000*stRange(2))]));
+        freqVals = tmpData.freqVals;
+
+        tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials);
+        powerDataTMP = cat(3,powerDataTMP,tmpPower);
+
+        if ~isempty(protocolPosRef)
+            tmpPowerRef = getPowerData(tmpData,protocolPosRef,'bl',badElectrodeRejectionFlag,cutoffNumTrials);
+            powerDataRefTMP = cat(3,powerDataRefTMP,tmpPowerRef);
+        end
+    end
+    powerData{i} = powerDataTMP;
+    powerDataRef{i} = powerDataRefTMP;
+end
+end
 function tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials)
 
 numTrials = tmpData.numTrials(protocolPos);
@@ -499,27 +501,5 @@ if displaySignificanceFlag % Do significance Testing
             patch(xVals,yVals,'k','linestyle','none');
         end
     end
-end
-end
-
-function [meanTFData,timeValsTF,freqValsTF] = getTFData(subjectNameLists,protocolIndex,badElecRejectionFlag)
-meanTFData = [];
-for i=1:length(subjectNameLists)
-    subjectName = subjectNameLists{i};
-    %disp(subjectName);
-    fileName = fullfile(pwd,'savedData',[subjectName '_ep_v8_TF.mat']);
-    load(fileName);
-    if badElecRejectionFlag
-        badElecToReject = badElectrodes{protocolIndex};
-        goodElecsInd    = not(ismember(electrodeList,badElecToReject));
-        if sum(goodElecsInd)>1
-            meanTfPowerTMP = squeeze(mean(tfPower{protocolIndex}(goodElecsInd,:,:),1));
-        else
-            meanTfPowerTMP = [];
-        end
-    else
-        meanTfPowerTMP = squeeze(mean(tfPower{protocolIndex}(:,:,:),1));
-    end
-    meanTFData = cat(3,meanTFData,meanTfPowerTMP);
 end
 end
