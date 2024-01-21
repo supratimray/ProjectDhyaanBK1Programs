@@ -8,7 +8,10 @@
 % 2. Reject common badElectrodes of all protocols
 % 3: Reject badElectrodes of G1
 
-function displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag)
+% Option added to return PSD, power and topoplot data. Also to simply
+% return these without displaying here.
+
+function [psdDataToReturn,powerDataToReturn,goodSubjectNameListsToReturn,topoplotDataToReturn,freqVals] = displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag,displayDataFlag)
 
 if ~exist('protocolName','var');          protocolName='G1';            end
 if ~exist('analysisChoice','var');        analysisChoice='st';          end
@@ -22,7 +25,7 @@ if ~exist('stRange','var');               stRange = [0.25 1.25];        end
 
 if ~exist('freqRangeList','var')
     freqRangeList{1} = [8 13]; % alpha
-    freqRangeList{2} = [24 34]; % SG
+    freqRangeList{2} = [20 34]; % SG
     freqRangeList{3} = [35 65]; % FG
 end
 if ~exist('axisRangeList','var')
@@ -39,6 +42,7 @@ cutoffNumTrials = cutoffList(2);
 if ~exist('useMedianFlag','var');         useMedianFlag = 0;            end
 if ~exist('hAllPlots','var');             hAllPlots = [];               end
 if ~exist('pairedDataFlag','var');        pairedDataFlag = 0;           end
+if ~exist('displayDataFlag','var');       displayDataFlag = 1;          end
 
 numFreqRanges = length(freqRangeList);
 freqRangeColors = copper(numFreqRanges);
@@ -64,23 +68,22 @@ saveFolderName = 'savedData';
 numGroups = length(electrodeGroupList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Generate plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if isempty(hAllPlots)
-    hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
-    hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
-    hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
-    hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
-    hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
-    figure(2);
-    hAllPlots.hTF=getPlotHandles(1,2,[0.1 0.1 0.85 0.7],0.03);
-else
-    hPSD = hAllPlots.hPSD;
-    hPower = hAllPlots.hPower;
-    hTopo0 = hAllPlots.hTopo0;
-    hTopo1 = hAllPlots.hTopo1;
-    hTopo2 = hAllPlots.hTopo2;
+if displayDataFlag
+    if isempty(hAllPlots)
+        hPSD  = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
+        hPower = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.02,0.02,0);
+        hTopo0 = getPlotHandles(1,2,[0.675 0.7 0.3 0.15],0.02,0.02,1);
+        hTopo1 = getPlotHandles(1,3,[0.675 0.55 0.3 0.13],0.02,0.02,1);
+        hTopo2 = getPlotHandles(numFreqRanges,3,[0.675 0.05 0.3 0.45],0.02,0.02,1);
+    else
+        hPSD = hAllPlots.hPSD;
+        hPower = hAllPlots.hPower;
+        hTopo0 = hAllPlots.hTopo0;
+        hTopo1 = hAllPlots.hTopo1;
+        hTopo2 = hAllPlots.hTopo2;
+    end
+    montageChanlocs = showElectrodeGroups(hTopo0(1,:),capType,electrodeGroupList,groupNameList);
 end
-
-montageChanlocs = showElectrodeGroups(hTopo0(1,:),capType,electrodeGroupList,groupNameList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 protocolNameList = [{'EO1'} {'EC1'} {'G1'} {'M1'} {'G2'} {'EO2'} {'EC2'} {'M2'}];
@@ -109,6 +112,7 @@ numElectrodes = size(powerData{1},1);
 percentData = zeros(2,numElectrodes);
 comparisonData = zeros(numFreqRanges,2,numElectrodes);
 
+topoplotDataToReturn = cell(2,numFreqRanges);
 for i=1:2
     if isempty(protocolPosRef)
         x=powerData{i};
@@ -122,20 +126,23 @@ for i=1:2
     for j=1:numElectrodes
         numBadSubjects(j) = sum(isnan(squeeze(x(j,1,:))));
     end
-    axes(hTopo1(i)); %#ok<*LAXES>
 
-    % Modification in the topoplot code which allows us to not interpolate across electrodes.
-    %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
-    percentData(i,:) = 100*(numBadSubjects/numSubjects);
-    topoplot(percentData(i,:),montageChanlocs,'maplimits',[0 100],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
-    title(titleStr{i},'color',displaySettings.colorNames(i,:));
-    if i==1
-        ylabel('Bad subjects (%)');
+    if displayDataFlag
+        axes(hTopo1(i)); %#ok<*LAXES>
+
+        % Modification in the topoplot code which allows us to not interpolate across electrodes.
+        %topoplot_murty(numBadSubjects/numSubjects,montageChanlocs,'electrodes','off','style','blank','drawaxis','off','emarkercolors',numBadSubjects/numSubjects); colorbar;
+        percentData(i,:) = 100*(numBadSubjects/numSubjects);
+        topoplot(percentData(i,:),montageChanlocs,'maplimits',[0 100],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
+        title(titleStr{i},'color',displaySettings.colorNames(i,:));
+        if i==1
+            ylabel('Bad subjects (%)');
+        end
     end
 
     %%%%%%%%%%%%%%%%%%%%%%% Show topoplots of power %%%%%%%%%%%%%%%%%%%%%%%
     for j=1:numFreqRanges
-        axes(hTopo2(j,i));
+        
         if isempty(protocolPosRef)
             x = log10(sum(powerData{i}(:,freqPosList{j},:),2));
         else
@@ -147,24 +154,34 @@ for i=1:2
             data = squeeze(mean(x,3,'omitnan'));
         end
         comparisonData(j,i,:) = data;
-        topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
+
+        topoplotDataToReturn{i,j} = data;
+        if displayDataFlag
+            axes(hTopo2(j,i));
+            topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
+        end
     end
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plot the difference of topoplots %%%%%%%%%%%%%%%%%%%
-axes(hTopo1(3));
-topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
+if displayDataFlag
+    axes(hTopo1(3));
+    topoplot(-diff(percentData),montageChanlocs,'maplimits',[-25 25],'electrodes','on','plotrad',0.6,'headrad',0.6); colorbar;
 
-for i=1:numFreqRanges
-    axes(hTopo2(i,3));
-    data = -diff(squeeze(comparisonData(i,:,:)));
-    if isempty(protocolPosRef)
-        data = 10*data;
+    for i=1:numFreqRanges
+        axes(hTopo2(i,3));
+        data = -diff(squeeze(comparisonData(i,:,:)));
+        if isempty(protocolPosRef)
+            data = 10*data;
+        end
+        topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
     end
-    topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6); colorbar;
 end
 
 %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+psdDataToReturn = cell(1,numGroups);
+powerDataToReturn = cell(numGroups,numFreqRanges);
+goodSubjectNameListsToReturn = cell(numGroups,2);
 
 for i=1:numGroups
 
@@ -201,6 +218,10 @@ for i=1:numGroups
         end
         badSubjectPos = badSubjectPosList{j};
 
+        tmp = goodSubjectNameLists{j};
+        tmp(badSubjectPos) = [];
+        goodSubjectNameListsToReturn{i,j} = tmp;
+
         if ~isempty(badSubjectPos)       
             disp([groupNameList{i} ', ' titleStr{j} ', '  'Not enough good electrodes for ' num2str(length(badSubjectPos)) ' subjects.']);
             pData(:,:,badSubjectPos)=[];
@@ -217,12 +238,17 @@ for i=1:numGroups
             logPSDData{j} = 10*(log10(meanPSDData{j}) - log10(meanPSDDataRef{j}));
         end
 
-        text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
+        if displayDataFlag
+            text(30,yLimsPSD(2)-0.5*j,[titleStr{j} '(' num2str(size(meanPSDData{j},1)) ')'],'color',displaySettings.colorNames(j,:),'parent',hPSD(i));
+        end
     end
 
-    displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,~pairedDataFlag);
-    title(groupNameList{i});
-    xlim(hPSD(i),freqLims);
+    psdDataToReturn{i} = logPSDData;
+    if displayDataFlag
+        displayAndcompareData(hPSD(i),logPSDData,freqVals,displaySettings,yLimsPSD,1,useMedianFlag,~pairedDataFlag);
+        title(groupNameList{i});
+        xlim(hPSD(i),freqLims);
+    end
 
     % Violin plots for power
     for j=1:numFreqRanges
@@ -235,33 +261,37 @@ for i=1:numGroups
             end
         end
 
-        % display violin plots for power
-        displaySettings.plotAxes = hPower(j,i);
-        if ~useMedianFlag
-            displaySettings.parametricTest = 1;
-        else
-            displaySettings.parametricTest = 0;
-        end
+        powerDataToReturn{i,j} = tmpLogPower;
 
-        if i==numGroups && j==1
-            displaySettings.showYTicks=1;
-            displaySettings.showXTicks=1;
-        else
-            displaySettings.showYTicks=0;
-            displaySettings.showXTicks=0;
-        end
-        displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,pairedDataFlag,displaySettings);
-        if i==1
-            ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
-        end
+        if displayDataFlag
+            % display violin plots for power
+            displaySettings.plotAxes = hPower(j,i);
+            if ~useMedianFlag
+                displaySettings.parametricTest = 1;
+            else
+                displaySettings.parametricTest = 0;
+            end
 
-        % Add lines in PSD plots
-        for k=1:2
-            line([freqRangeList{j}(k) freqRangeList{j}(k)],yLimsPSD,'color',freqRangeColors(j,:),'parent',hPSD(i));
-        end
+            if i==numGroups && j==1
+                displaySettings.showYTicks=1;
+                displaySettings.showXTicks=1;
+            else
+                displaySettings.showYTicks=0;
+                displaySettings.showXTicks=0;
+            end
+            displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,pairedDataFlag,displaySettings);
+            if i==1
+                ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
+            end
 
-        if ~isempty(protocolPosRef)
-            line([0 freqVals(end)],[0 0],'color','k','parent',hPSD(i));
+            % Add lines in PSD plots
+            for k=1:2
+                line([freqRangeList{j}(k) freqRangeList{j}(k)],yLimsPSD,'color',freqRangeColors(j,:),'parent',hPSD(i));
+            end
+
+            if ~isempty(protocolPosRef)
+                line([0 freqVals(end)],[0 0],'color','k','parent',hPSD(i));
+            end
         end
     end
 end

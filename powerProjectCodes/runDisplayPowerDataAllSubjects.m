@@ -11,7 +11,7 @@ hPanel1 = uipanel('Title','Subjects','fontSize',fontSizeLarge,'Unit','Normalized
 
 % Comparison - paired or unpaired
 uicontrol('Parent',hPanel1,'Unit','Normalized','Position',[0 2/3 0.5 1/3],'Style','text','String','Comparison','FontSize',fontSizeSmall);
-comparisonList = [{'unpaired'} {'paired'}];
+comparisonList = [{'paired'} {'unpaired'}];
 hComparison = uicontrol('Parent',hPanel1,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 2/3 0.5 1/3],'Style','popup','String',comparisonList,'FontSize',fontSizeSmall);
 
 % Gender - all, male, female
@@ -64,7 +64,7 @@ hBadElectrodeChoice = uicontrol('Parent',hPanel3,'Unit','Normalized','Background
 %%%%%%%%%%%%%%%%%%%%%%%%% Freq Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel4 = uipanel('Title','Freq Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.475 1-panelHeight 0.15 panelHeight]);
 freqRangeList0{1} = [8 13];
-freqRangeList0{2} = [24 34];
+freqRangeList0{2} = [20 34];
 freqRangeList0{3} = [35 65];
 
 numFreqRanges = length(freqRangeList0);
