@@ -3,10 +3,11 @@
 
 % badTrialRejectionFlag: 1: Don't reject badElectrodes, 2: reject badElectrodes for that protocol, 3: Reject badElectrodes of all protocols 
 
-function displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badTrialNameStr,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
+function displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
 
 if ~exist('folderSourceString','var');    folderSourceString=[];        end
-if ~exist('badElectrodeList','var');      badTrialNameStr='_wo_v8';     end
+if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
+if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
 if ~exist('plotRawTFFlag','var');         plotRawTFFlag=0;              end
 if ~exist('sortByBadTrialFlag','var');    sortByBadTrialFlag=1;         end
@@ -37,11 +38,8 @@ for i=1:numPSDComparisons
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[~,~,~,electrodeGroupList,groupNameList,highPriorityElectrodeNums] = electrodePositionOnGrid(1,gridType,[],capType);
+[electrodeGroupList,groupNameList] = getElectrodeGroups(gridType,capType);
 numGroups = length(electrodeGroupList);
-electrodeGroupList{numGroups+1} = highPriorityElectrodeNums;
-groupNameList{numGroups+1} = 'highPriority';
-numGroups=numGroups+1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Set up plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hBadElectrodes = getPlotHandles(1,numProtocols,[0.05 0.875 0.6 0.1],0.01,0.01,1);
@@ -71,6 +69,7 @@ badElectrodes.declaredBadElecs = [];
 
 for i=1:numProtocols
     protocolName=protocolNameList{i};
+    badTrialNameStr = ['_wo_' badTrialVersion];
     badFileName = fullfile(folderSourceString,'data','segmentedData',subjectName,gridType,expDate,protocolName,'segmentedData',['badTrials' badTrialNameStr '.mat']);
     if exist(badFileName,'file')
         x=getBadTrialInfo(badFileName);
@@ -82,6 +81,12 @@ for i=1:numProtocols
         badElectrodes.declaredBadElecs = cat(1,badElectrodes.declaredBadElecs,x.badElecs.declaredBadElecs);
         displayBadElecs(hBadElectrodes(i),subjectName,expDate,protocolName,folderSourceString,gridType,capType,badTrialNameStr);
         title(hBadElectrodes(i),[protocolNameList{i} '(' num2str(length(getAllBadElecs(badElecList{i}))) ')'],'color',colorNames{i});
+
+        if ~strcmp(badEyeCondition,'wo')
+            badFileName2 = fullfile(folderSourceString,'data','segmentedData',subjectName,gridType,expDate,protocolName,'segmentedData',['badTrials_' badEyeCondition '.mat']);
+            x=load(badFileName2);
+            badTrialsList{i} = unique(cat(1,badTrialsList{i},x.badEyeTrials));
+        end
     else
         badTrialsList{i}=[];
         badElecList{i} = [];
