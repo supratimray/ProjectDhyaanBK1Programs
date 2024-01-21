@@ -98,8 +98,10 @@ goodSubjectNameLists = getGoodSubjectNameList(subjectNameLists,badEyeCondition,b
 
 %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%%
 freqPosList = cell(1,numFreqRanges);
+lineNoiseRange = [48 52];
+badFreqPos = intersect(find(freqVals>=lineNoiseRange(1)),find(freqVals<=lineNoiseRange(2)));
 for i = 1:numFreqRanges
-    freqPosList{i} = intersect(find(freqVals>=freqRangeList{i}(1)),find(freqVals<freqRangeList{i}(2)));
+    freqPosList{i} = setdiff(intersect(find(freqVals>=freqRangeList{i}(1)),find(freqVals<freqRangeList{i}(2))),badFreqPos);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Show Topoplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
