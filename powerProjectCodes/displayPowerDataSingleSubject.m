@@ -3,13 +3,12 @@
 
 % badTrialRejectionFlag: 1: Don't reject badElectrodes, 2: reject badElectrodes for that protocol, 3: Reject badElectrodes of all protocols 
 
-function displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag)
+function displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,sortByBadTrialFlag)
 
 if ~exist('folderSourceString','var');    folderSourceString=[];        end
 if ~exist('badEyeCondition','var');       badEyeCondition='ep';         end
 if ~exist('badTrialVersion','var');       badTrialVersion='v8';         end
 if ~exist('badElectrodeRejectionFlag','var'); badElectrodeRejectionFlag=2;  end
-if ~exist('plotRawTFFlag','var');         plotRawTFFlag=0;              end
 if ~exist('sortByBadTrialFlag','var');    sortByBadTrialFlag=1;         end
 
 if isempty(folderSourceString)
@@ -24,10 +23,11 @@ protocolNameList = [{'EO1'}     {'EC1'}     {'G1'}      {'M1'}          {'G2'}  
 colorNames       = [{[0.9 0 0]} {[0 0.9 0]} {[0 0 0.9]} {[0.9 0.9 0.9]} {[0 0 0.3]} {[0.3 0 0]} {[0 0.3 0]} {[0.3 0.3 0.3]}];
 numProtocols = length(protocolNameList);
 
-comparePSDConditions{1} = [1 6];
-comparePSDConditions{2} = [2 7];
-comparePSDConditions{3} = [3 5];
-comparePSDConditions{4} = [4 8];
+comparePSDConditions{1} = [1 6 2 7]; % Compare raw EO and EC conditions
+comparePSDConditions{2} = [1 6 4 8]; % Compare raw M1 M2 and EO1
+comparePSDConditions{3} = [3 5 8]; % Compare diff G1, G2 and M2 (stimulus - baseline period)
+comparisonMode = [0 0 1]; % 0 - raw, 1 - diff
+
 numPSDComparisons = length(comparePSDConditions);
 comparePSDConditionStr = cell(1,numPSDComparisons);
 
@@ -42,21 +42,18 @@ end
 numGroups = length(electrodeGroupList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Set up plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hBadElectrodes = getPlotHandles(1,numProtocols,[0.05 0.875 0.6 0.1],0.01,0.01,1);
-hBadElectrodes2 = getPlotHandles(1,4,[0.7 0.875 0.25 0.1],0.01,0.01,1);
+hBadElectrodes = getPlotHandles(1,numProtocols,[0.05 0.875 0.5 0.1],0.01,0.01,1);
+hBadElectrodes2 = getPlotHandles(1,4,[0.6 0.875 0.35 0.1],0.01,0.01,1);
 
-hTF = getPlotHandles(numGroups,numProtocols,[0.05 0.05 0.6 0.8],0.01,0.01,1);
-hPSD  = getPlotHandles(numGroups,numPSDComparisons,[0.7 0.05 0.25 0.8],0.01,0.01,1);
+hTF = getPlotHandles(numGroups,numProtocols,[0.05 0.05 0.5 0.8],0.01,0.01,1);
+hPSD  = getPlotHandles(numGroups,numPSDComparisons,[0.6 0.05 0.35 0.8],0.01,0.01,1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Ranges for plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 colormap jet;
 freqRangeHz = [0 100];
 
-if plotRawTFFlag
-    cLims = [-3 3];
-else
-    cLims = [-1 1];
-end
+cLimsRaw = [-3 3];
+cLimsDiff = [-10 10]; % dB
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % display bad electrodes for all protocols and also generate common bad electrodes
@@ -110,9 +107,11 @@ for g=1:numGroups
 
     % Get Data
     psdVals = cell(1,numProtocols);
+    psdValsBL = cell(1,numProtocols);
     freqVals = cell(1,numProtocols);
     meanPSDVals = cell(1,numProtocols);
-    
+    meanPSDValsBL = cell(1,numProtocols);
+
     numGoodElectrodesList = zeros(1,numProtocols);
     numGoodTrials = zeros(1,numProtocols);
 
@@ -129,19 +128,15 @@ for g=1:numGroups
         
         if ~isempty(electrodeList)
             protocolName = protocolNameList{i};
-            [psdVals{i},freqVals{i}] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList);
+            [psdVals{i},freqVals{i}] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,'st');
+            psdValsBL{i} = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,'bl');
             goodPos = setdiff(1:size(psdVals{i},2),badTrialsList{i});
             meanPSDVals{i} = mean(psdVals{i}(:,goodPos),2);
+            meanPSDValsBL{i} = mean(psdValsBL{i}(:,goodPos),2);
             numGoodTrials(i) = length(goodPos);
         end
     end
 
-    if isempty(meanPSDVals{1})
-        disp('baseline condition does not exist. Plotting rawTF');
-        plotRawTFFlag=1;
-        cLims = [-3 3];
-    end
-    
     for i=1:numProtocols
         
         % Time-frequency plots
@@ -156,15 +151,17 @@ for g=1:numGroups
                 badTrialIndicesToUse = badTrialsList{i};
             end
 
-            if plotRawTFFlag
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}(:,xPos)));
+            protocolName = protocolNameList{i};
+            if strcmp(protocolName,'G1') || strcmp(protocolName,'G2') || strcmp(protocolName,'M2') % Show change in power
+                bl = repmat(meanPSDValsBL{i},1,numTrials);
+                pcolor(hTF(g,i),1:numTrials,freqVals{i},10*((psdVals{i}(:,xPos))-bl));
+                clim(hTF(g,i),cLimsDiff); 
             else
-                bl = repmat(meanPSDVals{1},1,numTrials);
-                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}(:,xPos))-bl);
+                pcolor(hTF(g,i),1:numTrials,freqVals{i},(psdVals{i}(:,xPos)));
+                clim(hTF(g,i),cLimsRaw);
             end
             
             shading(hTF(g,i),'interp');
-            clim(hTF(g,i),cLims); 
             ylim(hTF(g,i),freqRangeHz);
             
             hold(hTF(g,i),'on');
@@ -192,25 +189,24 @@ for g=1:numGroups
         for j=1:length(comparePSDConditions{i})
             conditionNum = comparePSDConditions{i}(j);
             if ~isempty(meanPSDVals{conditionNum})
-                if plotRawTFFlag
-                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum});
+                if comparisonMode(i)==0 % plot raw PSDs
+                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum},'color',colorNames{conditionNum},'linewidth',2);
                 else
-                    plot(hPSD(g,i),freqVals{conditionNum},meanPSDVals{conditionNum}-meanPSDVals{1},'color',colorNames{conditionNum});
+                    plot(hPSD(g,i),freqVals{conditionNum},10*(meanPSDVals{conditionNum}-meanPSDValsBL{conditionNum}),'color',colorNames{conditionNum},'linewidth',2);
                 end
             end
             hold(hPSD(g,i),'on');
         end
         
-        if ~plotRawTFFlag
+        if comparisonMode(i)
             plot(hPSD(g,i),freqVals{conditionNum},zeros(1,length(freqVals{conditionNum})),'k--');
+            ylim(hPSD(g,i),cLimsDiff);
+        else
+            ylim(hPSD(g,i),cLimsRaw);
         end
         
         xlim(hPSD(g,i),freqRangeHz);
-        ylim(hPSD(g,i),cLims);
-        if g<numGroups
-            set(hPSD(g,i),'XTickLabel',[]);
-        end
-        
+
         if g==1
             title(hPSD(g,i),comparePSDConditionStr{i});
         end
@@ -229,9 +225,15 @@ if exist('getDeclaredBadElecs','file')
     x.badElecs.declaredBadElecs = getDeclaredBadElecs';
 end
 end
-function [psd,freqVals] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList)
+function [psd,freqVals] = getData(subjectName,expDate,protocolName,folderSourceString,gridType,electrodeList,analysisChoice)
 
-timeRange = [0.25 1.25];
+if ~exist('analysisChoice','var');        analysisChoice='st';          end
+
+if strcmp(analysisChoice,'st')
+    timeRange = [0.25 1.25];
+else
+    timeRange = [-1 0];
+end
 tapers = [1 1];
 freqRange = [0 100];
 

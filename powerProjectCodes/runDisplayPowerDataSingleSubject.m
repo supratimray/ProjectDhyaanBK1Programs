@@ -1,4 +1,4 @@
-clear; close all
+clear;
 
 [allSubjectNames,expDateList] = getDemographicDetails('BK1');
 [goodSubjectList, meditatorList, controlList] = getGoodSubjectsBK1;
@@ -6,7 +6,6 @@ folderSourceString = 'N:\Projects\ProjectDhyaan\BK1';
 saveFolderName = 'powerResultsSingleSubject';
 
 saveFileFlag     = 1;
-plotRawTFFlag    = 1;
 sortByBadTrialFlag = 1;
 
 badEyeCondition = 'ep'; % use 'wo' for without, 'ep' for eye position and 'em' for eye movement
@@ -26,12 +25,12 @@ for i=1:length(useTheseIndices)
     subjectName = goodSubjectList{useTheseIndices(i)};
     disp(['Analyzing for the subject ' subjectName]);
     expDate = expDateList{strcmp(subjectName,allSubjectNames)};
-    displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,plotRawTFFlag,sortByBadTrialFlag);
+    displayPowerDataSingleSubject(subjectName,expDate,folderSourceString,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,sortByBadTrialFlag);
 
     if saveFileFlag
         makeDirectory(saveFolderName);
         badTrialNameStr = ['_' badEyeCondition '_' badTrialVersion];
-        fileNameTif = fullfile(saveFolderName,[subjectName badTrialNameStr '_badElecChoice' num2str(badElectrodeRejectionFlag) '_raw' num2str(plotRawTFFlag) '_sort' num2str(sortByBadTrialFlag) '.tif']);
-        print(fh,fileNameTif,'-dtiff','-r300');
+        fileNameTif = fullfile(saveFolderName,[subjectName badTrialNameStr '_badElecChoice' num2str(badElectrodeRejectionFlag) '_sort' num2str(sortByBadTrialFlag) '.tif']);
+        print(fh,fileNameTif,'-dtiff','-r100');
     end
 end
