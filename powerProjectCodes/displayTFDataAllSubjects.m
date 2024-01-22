@@ -1,117 +1,145 @@
-% display TF data for Matched Subjects (A and C)
-
-clear
-close all
-
-protocolIndex = 3;
-numMatchedMales = 18;
-numMatchedFemales = 14;
+% display Time-frequency data individually for all subjects
+clear; clf;
+comparisonStr = 'paired';
 protocolNameList = [{'G1'} {'G2'} {'M2'}];
 
-diffTf = 1;
-fontsize = 10;
+badEyeCondition = 'ep';
+badTrialVersion = 'v8';
+cutoffNumElectrodes = 3;
+
+freqRange = [24 34]; % Show this range
+timeLims = [-0.5 1];
+freqLims = [0 70];
+cLims = [-5 5];
+
+diffTF = 1;
 badElecRejectionFlag = 1;
 baselineRange = [-1 0];
 
-slowGammaRange = [22 34];
-fastGammaRange = [35 65];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get subject list %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if strcmp(comparisonStr,'paired')
+    pairedSubjectNameList = getPairedSubjectsBK1;
+    subjectNameListsTMP{1} = pairedSubjectNameList(:,1);
+    subjectNameListsTMP{2} = pairedSubjectNameList(:,2);
+else
+    [~, meditatorList, controlList] = getGoodSubjectsBK1;
+    subjectNameListsTMP{1} = meditatorList;
+    subjectNameListsTMP{2} = controlList;
+end
 
-% getting the demographic information
-pairedSubjectNameList = getPairedSubjectsBK1;
-numPairs  = length(pairedSubjectNameList);
-numGroups = size(pairedSubjectNameList,2);
-[subjectNameList,expDateList,labelList,ageList,genderList,educationList,mcList] = getDemographicDetails('BK1');
+%%%%%%%%%%%%%%%%%% Next, divide into males and females %%%%%%%%%%%%%%%%%%%%
+[subjectNameListAll,~,~,ageListAll,genderListAll] = getDemographicDetails('BK1');
 
-% get the agesList
-ageListPaired = zeros(numPairs,2);
-for j=1:numGroups
-    for i=1:numPairs
-        subIndex = find(strcmp(subjectNameList,pairedSubjectNameList(i,j)));
-        ageListPaired(i,j) = ageList(subIndex);
+subjectNameListGender{1} = subjectNameListAll(strcmpi(genderListAll, 'M'));
+subjectNameListGender{2} = subjectNameListAll(strcmpi(genderListAll, 'F'));
+
+subjectNameLists = cell(2,2);
+numSubjects = zeros(2,2);
+ageList = cell(2,2);
+for i=1:2 % Gender
+    for j=1:2 % Meditator/Control
+        % Get subjects sorted by age
+        tmpList = intersect(subjectNameListGender{i},subjectNameListsTMP{j});
+        numSubjects(i,j) = length(tmpList);
+
+        tmpAges = zeros(1,numSubjects(i,j));
+        for k=1:numSubjects(i,j)
+            tmpAges(k) = ageListAll(strcmp(tmpList{k},subjectNameListAll));
+        end
+        [~,pos] = sort(tmpAges);
+        subjectNameLists{i,j} = tmpList(pos);
+        ageList{i,j} = tmpAges(pos);
     end
 end
 
-% plot for a single subject:
-hTF1 = getPlotHandles(numMatchedMales,numGroups,[0.08 0.06 0.4 0.84],0.005,0.005);
-hTF2 = getPlotHandles(numMatchedMales,numGroups,[0.54  0.06 0.4 0.84],0.005,0.005);
-hTF = [hTF1;hTF2];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+numProtocols = length(protocolNameList);
+maxNumSubjects = max(numSubjects(:));
+hTF = getPlotHandles(maxNumSubjects,4*numProtocols,[0.05 0.05 0.9 0.9],0.005,0.005);
 
-for i=1:numPairs
-    for j=1:numGroups
-        subjectName = pairedSubjectNameList{i,j};
-        disp(subjectName);
-        fileName = fullfile(pwd,'savedData',[subjectName '_ep_v8_TF.mat']);
-        load(fileName);
+genderStr = [{'M'} {'F'}];
+subjectTypeStr = [{'Med'} {'Con'}];
 
-        if badElecRejectionFlag
-            badElecToReject = badElectrodes{protocolIndex};
-            goodElecsInd    = not(ismember(electrodeList,badElecToReject));
-            if sum(goodElecsInd)>1
-                meanTfPower = squeeze(mean(tfPower{protocolIndex}(goodElecsInd,:,:),1));
-            else
-                disp('Not enough good electrodes to plot')
-                continue
+for i=1:2 % Gender
+    for j=1:2 % Meditator/Control
+        columnIndexList = 2*numProtocols*(i-1) + numProtocols*(j-1) + (1:numProtocols);
+        subjectNamesTMP = subjectNameLists{i,j};
+        numSubjectsThisCondition = length(subjectNamesTMP);
+
+        for k=1:numSubjectsThisCondition
+            subjectName = subjectNamesTMP{k};
+            disp(subjectName);
+            fileName = fullfile('savedData',[subjectName '_' badEyeCondition '_' badTrialVersion '_TF.mat']);
+            tmpData = load(fileName);
+
+            for p=1:numProtocols
+                hPlot = hTF(k,columnIndexList(p));
+
+                badElectrodes = tmpData.badElectrodes{p};
+                goodElecsInd    = not(ismember(tmpData.electrodeList,badElectrodes));
+                
+                if sum(goodElecsInd)>=cutoffNumElectrodes
+                    meanTFPower = squeeze(mean(tmpData.tfPower{p}(goodElecsInd,:,:),1));
+                    logP = log10(meanTFPower);
+                    baselinePower = mean(logP(tmpData.timeValsTF>=baselineRange(1) & tmpData.timeValsTF<=baselineRange(2),:));
+                    
+                    if diffTF
+                        pcolor(hPlot,tmpData.timeValsTF,tmpData.freqValsTF,10*(logP'- repmat(baselinePower',1,length(tmpData.timeValsTF))));
+                    else
+                        pcolor(hPlot,tmpData.timeValsTF,tmpData.freqValsTF,logP'); %#ok<UNRCH>
+                    end
+
+                    % Add labels
+                    shading(hPlot,'interp');
+                    line(timeLims,[freqRange(1) freqRange(1)],'color','k','parent',hPlot);
+                    line(timeLims,[freqRange(2) freqRange(2)],'color','k','parent',hPlot);
+
+                    axis(hPlot,[timeLims freqLims]);
+                    clim(hPlot,cLims);
+                    if p==1
+                        text(timeLims(1),freqLims(2)-10,[subjectName ',N=' num2str(tmpData.numTrials(p))],'Parent',hPlot);
+                    elseif p==2
+                        text(timeLims(1),freqLims(2)-10,[num2str(ageList{i,j}(k)) 'Yr, N=' num2str(tmpData.numTrials(p))],'Parent',hPlot);
+                    else
+                        text(timeLims(1),freqLims(2)-10,['N=' num2str(tmpData.numTrials(p))],'Parent',hPlot);
+                    end
+                    set(hPlot, 'TickDir', 'out');
+                    set(hPlot,'fontsize',10);
+                    set(hPlot,'fontweight','bold');
+
+                    if k==numSubjectsThisCondition
+                        xlabel(hPlot,'Time(s)');
+                    else
+                        set(hPlot,'Xticklabel',[]);
+                    end
+
+                    if columnIndexList(p)==1
+                        if k==numSubjectsThisCondition
+                            ylabel(hPlot,'Frequency (Hz)');
+                        end
+                    else
+                        set(hPlot,'Yticklabel',[]);
+                    end
+
+                    if k==1
+                        title(hPlot,[genderStr{i} ', ' subjectTypeStr{j} ',' protocolNameList{p}]);
+                    end
+                else
+                    disp(['Not enough good electrodes to plot for ' subjectName tmpData.protocolNameList{p}]);
+                end
             end
-        else
-            meanTfPower = squeeze(mean(tfPower{protocolIndex}(:,:,:),1));
         end
 
-        logP = log10(meanTfPower);
-        baselinePower = mean(logP(timeValsTF>=baselineRange(1) & timeValsTF<=baselineRange(2),:));
-        if diffTf
-            pcolor(hTF(i,j),timeValsTF,freqValsTF,10*(logP'- repmat(baselinePower',1,length(timeValsTF))));
-        else
-            pcolor(hTF(i,j),timeValsTF,freqValsTF,logP');
-        end
-
-        % Add labels
-        axes(hTF(i,j));
-        shading(hTF(i,j),'interp'); colormap jet;
-        yline(slowGammaRange(1),'k--');
-        yline(slowGammaRange(2),'k--');
-        text(-0.2,50,[num2str(ageListPaired(i,j)) 'Yrs'],'Parent',hTF(i,j));
-        xlim(hTF(i,j),[-0.25 max(timeValsTF)]);
-        set(hTF(i,j), 'TickDir', 'out');
-
-        if ismember(i,[numMatchedMales,numPairs]) && j==1
-            xlabel(hTF(i,j),'Time(s)');
-            ylabel(hTF(i,j),'Frequency (Hz)');
-            set(hTF(i,j), 'fontsize',fontsize);
-            set(hTF(i,j), 'FontWeight','bold');
-        else
-            set(hTF(i,j),'Yticklabel',[]);
-            set(hTF(i,j),'Xticklabel',[]);
-        end
-
-        if j==1 && ismember(i,[1,numMatchedMales+1])
-            if i==1
-                title(hTF(i,j),'Meditators(M)');
-            else
-                title(hTF(i,j),'Meditators(F)');
-            end
-        elseif j==2 && ismember(i,[1,numMatchedMales+1])
-            if i==1
-                title(hTF(i,j),'Controls(M)');
-            else
-                title(hTF(i,j),'Controls(F)');
-            end
-        end
-
-        clim(hTF(i,j),[-5 5]);
-        ylim(hTF(i,j),[0 70]);
+        % Hide remaining plots
+        set(hTF(numSubjectsThisCondition+1:maxNumSubjects,columnIndexList), 'visible', 'off');
     end
 end
 
 % set the colorbar
-set(hTF(i,j), 'TickDir', 'out');
-hc = colorbar('Position', [0.05 0.2 0.02 0.3]);
-
+colormap jet
+axes(hTF(1,1));
+hc = colorbar('Position', [0.96 0.05 0.01 0.1]);
 hc.FontSize         = 10;
 hc.Label.FontSize   = 10;
 hc.Label.FontWeight = 'bold';
 hc.Label.String = ['\Delta Power' '(dB)'];
-
-% hide remaining plots:
-numHidePlots = numMatchedMales-numMatchedFemales;
-set(hTF(numPairs+1:numPairs+numHidePlots,1:2), 'visible', 'off');
-sgtitle(['TF plot for Med vs Control (' protocolNameList{protocolIndex} ')']);

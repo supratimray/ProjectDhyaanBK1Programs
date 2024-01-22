@@ -190,7 +190,7 @@ for i=1:numGroups
     for j=1:2
         pData = powerData{j}(electrodeGroupList{i},:,:);
         numGoodElecs = length(electrodeGroupList{i}) - sum(isnan(squeeze(pData(:,1,:))),1);
-        badSubjectPosList{j} = find(numGoodElecs<=cutoffNumElectrodes);
+        badSubjectPosList{j} = find(numGoodElecs<cutoffNumElectrodes);
 
         if ~isempty(protocolPosRef)
             pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
