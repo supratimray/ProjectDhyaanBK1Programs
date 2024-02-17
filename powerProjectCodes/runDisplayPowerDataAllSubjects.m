@@ -64,7 +64,7 @@ hBadElectrodeChoice = uicontrol('Parent',hPanel3,'Unit','Normalized','Background
 %%%%%%%%%%%%%%%%%%%%%%%%% Freq Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel4 = uipanel('Title','Freq Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.475 1-panelHeight 0.15 panelHeight]);
 freqRangeList0{1} = [8 13];
-freqRangeList0{2} = [20 34];
+freqRangeList0{2} = [24 34];
 freqRangeList0{3} = [35 65];
 
 numFreqRanges = length(freqRangeList0);
@@ -83,7 +83,7 @@ end
 hPanel5 = uipanel('Title','Axis Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.625 1-panelHeight 0.15 panelHeight]);
 axisRangeList0{1} = [0 100]; axisRangeName{1} = 'Freq Lims (Hz)';
 axisRangeList0{2} = [-2.5 2.5]; axisRangeName{2} = 'YLims';
-axisRangeList0{3} = [-1.5 1.5]; axisRangeName{3} = 'cLims (topo)';
+axisRangeList0{3} = [-2 2]; axisRangeName{3} = 'cLims (topo)';
 
 numAxisRanges = length(axisRangeList0);
 hAxisRangeMin = cell(1,numAxisRanges);
