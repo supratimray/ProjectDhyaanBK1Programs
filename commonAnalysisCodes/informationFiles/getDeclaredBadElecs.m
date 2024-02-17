@@ -5,7 +5,7 @@ function [declaredBadElectrodes] = getDeclaredBadElecs(threshold)
 if ~exist('threshold','var');   threshold=0.35;       end
 
 if threshold==0.35
-    declaredBadElectrodes = [1  28  29  38  39  55  57  58]; % threshold 0.35
+    declaredBadElectrodes = [1 5 28 38 39 55 57 58]; % threshold 0.35
 end
 end
 
