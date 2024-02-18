@@ -34,7 +34,7 @@ logPowerMeditationGammaRaw = powerDataToReturn{groupPos,1};
 goodSubjectNamesMeditationGammaRaw = goodSubjectNameListsToReturn(groupPos,:);
 
 % Meditation-induced broadband gamma in M1 compared to EO1
-groupPos = 2; % Fronto-central (choose 1 for occipital)
+groupPos = 1; % Fronto-central (choose 1 for occipital)
 protocolName = {'M1'}; refChoice = {'EO1'}; analysisChoice = 'combined'; freqRangeList{1} = [30 80]; 
 [~,powerDataToReturn,goodSubjectNameListsToReturn] = displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,[],pairedDataFlag,0);
 logPowerMeditationGamma = powerDataToReturn{groupPos,1};
@@ -46,6 +46,20 @@ protocolName = {'G1'}; refChoice = {'G1'}; analysisChoice = 'st'; freqRangeList{
 [~,powerDataToReturn,goodSubjectNameListsToReturn] = displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,[],pairedDataFlag,0);
 logPowerStimulusGamma = powerDataToReturn{groupPos,1};
 goodSubjectNamesStimulusGamma = goodSubjectNameListsToReturn(groupPos,:);
+
+% Meditation-induced broadband gamma in M2 compared to G2
+groupPos = 1; % Fronto-central (choose 1 for occipital)
+protocolName = {'M2'}; refChoice = {'G2'}; analysisChoice = 'bl'; freqRangeList{1} = [30 80]; 
+[~,powerDataToReturn,goodSubjectNameListsToReturn] = displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,[],pairedDataFlag,0);
+logPowerMeditationGammaM2 = powerDataToReturn{groupPos,1};
+goodSubjectNamesMeditationGammaM2 = goodSubjectNameListsToReturn(groupPos,:);
+
+% Stimulus-induced narrowband gamma in M2
+groupPos = 1; % Fronto-central (choose 1 for occipital)
+protocolName = {'M2'}; refChoice = {'M2'}; analysisChoice = 'st'; freqRangeList{1} = [24 34]; 
+[~,powerDataToReturn,goodSubjectNameListsToReturn] = displayPowerDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refChoice,badEyeCondition,badTrialVersion,badElectrodeRejectionFlag,stRange,freqRangeList,axisRangeList,cutoffList,useMedianFlag,[],pairedDataFlag,0);
+logPowerStimulusGammaM2 = powerDataToReturn{groupPos,1};
+goodSubjectNamesStimulusGammaM2 = goodSubjectNameListsToReturn(groupPos,:);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Make violin plots which should match the results in previous plots
@@ -79,19 +93,29 @@ for pos=1:2 % 1 for meditators, 2 for controls
     hold on;
 end
 
-subplot(235)
+subplot(235);
+for pos=1:2 % 1 for meditators, 2 for controls
+    data1 = logPowerMeditationGammaM2{pos};
+    subjects1 = goodSubjectNamesMeditationGammaM2{pos};
+    data2 = logPowerStimulusGammaM2{pos};
+    subjects2 = goodSubjectNamesStimulusGammaM2{pos};
+    getCorrelation(data1,subjects1,data2,subjects2);
+    hold on;
+end
 
-practiceHoursData = load('BK1PracticeHours.mat');
-
-data1 = cell2mat(practiceHoursData.practiceHours(2:end,2));
-subjects1 = practiceHoursData.practiceHours(2:end,1);
-data2 = logPowerMeditationGammaRaw{1};
-subjects2 = goodSubjectNamesMeditationGammaRaw{1};
-getCorrelation(data1,subjects1,data2,subjects2);
-
-subplot(236)
-[subjects1,~,~,data1] = getDemographicDetails('BK1');
-
-data2 = logPowerStimulusGamma{1};
-subjects2 = goodSubjectNamesStimulusGamma{1};
-getCorrelation(data1,subjects1,data2,subjects2);
+% subplot(235)
+% 
+% practiceHoursData = load('BK1PracticeHours.mat');
+% 
+% data1 = cell2mat(practiceHoursData.practiceHours(2:end,2));
+% subjects1 = practiceHoursData.practiceHours(2:end,1);
+% data2 = logPowerMeditationGammaRaw{1};
+% subjects2 = goodSubjectNamesMeditationGammaRaw{1};
+% getCorrelation(data1,subjects1,data2,subjects2);
+% 
+% subplot(236)
+% [subjects1,~,~,data1] = getDemographicDetails('BK1');
+% 
+% data2 = logPowerStimulusGamma{1};
+% subjects2 = goodSubjectNamesStimulusGamma{1};
+% getCorrelation(data1,subjects1,data2,subjects2);

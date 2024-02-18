@@ -50,8 +50,8 @@ freqRangeColors = copper(numFreqRanges);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Display options %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 displaySettings.fontSizeLarge = 10;
 displaySettings.tickLengthMedium = [0.025 0];
-displaySettings.colorNames(1,:) = [1 0 0];
-displaySettings.colorNames(2,:) = [0 1 0];
+displaySettings.colorNames(1,:) = [0.8 0 0.8];      % Purple 
+displaySettings.colorNames(2,:) = [0.25 0.41 0.88]; % Cyan
 titleStr{1} = 'Meditators';
 titleStr{2} = 'Controls';
 
