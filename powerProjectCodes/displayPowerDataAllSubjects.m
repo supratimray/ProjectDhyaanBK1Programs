@@ -279,6 +279,8 @@ for i=1:numGroups
                 displaySettings.showYTicks=0;
                 displaySettings.showXTicks=0;
             end
+
+            %displaySettings.yPositionLine = 0.01;
             displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,pairedDataFlag,displaySettings);
             if i==1
                 ylabel(hPower(j,i),[num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz'],'color',freqRangeColors(j,:));
