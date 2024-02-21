@@ -1,20 +1,17 @@
-function ax=displayViolinPlot(dataArray,colorArray,showData,plotMean,showSignificance,pairedDataFlag,displaySettings)
+function ax=displayViolinPlot(dataArray,colorArray,showData,plotCentralTendency,showSignificance,pairedDataFlag,displaySettings)
 % displayViolinPlot makes the violin plots using the kernel desnsity estimate
 % of the original data, kernel density is estimated using the Matlab statistical toolbox function, ksdensity
 % The code is adapted from the original source, "https://github.com/bastibe/Violinplot-Matlab"
 % To know about the violinplot please refer to "stat.cmu.edu/~rnugent/PCMI2016/papers/ViolinPlots.pdf"
 
-if ~exist('plotMean','var');                      plotMean=0;                                     end
+if ~exist('plotCentralTendency','var');           plotCentralTendency=0;                          end
 if ~exist('displaySettings','var');               displaySettings=struct();                       end
 if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;                      end
 if ~isfield(displaySettings,'dataMarkerSize');    displaySettings.dataMarkerSize=12;              end
 if ~isfield(displaySettings,'medianMarkerSize');  displaySettings.medianMarkerSize=20;            end
 if ~isfield(displaySettings,'textFontSize');      displaySettings.textFontSize=8;                 end
-<<<<<<< HEAD
 if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=1.5;              end
-=======
 if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=0.5;              end
->>>>>>> 3ce27f8ce6b39d23a0398a8133cc6d8fdb1932be
 if ~isfield(displaySettings,'xPositionText');     displaySettings.xPositionText=0.5;              end
 if ~isfield(displaySettings,'plotAxes');          displaySettings.plotAxes=gca;                   end
 if ~isfield(displaySettings,'showYTicks');        displaySettings.showYTicks=0;                   end
@@ -25,7 +22,9 @@ if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{
 if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=0;               end
 if ~isfield(displaySettings,'tickLengthMedium');  displaySettings.tickLengthMedium=[0.025 0];     end
 if ~isfield(displaySettings,'plotQuartiles');     displaySettings.plotQuartiles=0;                end
-if ~isfield(displaySettings,'BoxWidth');          displaySettings.BoxWidth=0.005;                end
+if ~isfield(displaySettings,'BoxWidth');          displaySettings.BoxWidth=0.005;                 end
+if ~isfield(displaySettings,'scaleFactor');       displaySettings.scaleFactor=2;                  end
+if ~isfield(displaySettings,'medianFlag');        displaySettings.medianFlag=0;                   end
 
 alpha            = displaySettings.alpha;
 dataMarkerSize   = displaySettings.dataMarkerSize ;
@@ -40,6 +39,8 @@ xTickLabels      = displaySettings.xTickLabels;
 parametricTest   = displaySettings.parametricTest;
 plotQuartiles    = displaySettings.plotQuartiles;
 BoxWidth         = displaySettings.BoxWidth;
+scaleFactor      = displaySettings.scaleFactor;
+useMedianFlag    = displaySettings.medianFlag;
 
 % get the data in the cell array
 bandwidth = [];
@@ -58,9 +59,9 @@ else
 end
 
 % calculate kernel density
-meanData = zeros(1,size(Y,2));
-semData  = zeros(2,size(Y,2));
-xPosDataGroups = zeros(length(Y),length(Y{:,1}));
+centralTendency = zeros(1,size(Y,2));
+semData         = zeros(2,size(Y,2));
+xPosDataGroups  = zeros(length(Y),length(Y{:,1}));
 
 for pos=1:size(Y,2)
     width = 0.3;
@@ -93,7 +94,11 @@ for pos=1:size(Y,2)
         scatter(xPosData, data, dataMarkerSize, 'filled','MarkerFaceColor',colorArray{pos});
     end
 
-    meanData(pos) = mean(data,'omitnan');
+    if useMedianFlag
+        centralTendency (pos) = median(data,'omitnan');
+    else
+        centralTendency(pos) = mean(data,'omitnan');
+    end
     semData(pos)  = std(data,'omitnan')./sqrt(nnz(~isnan(data)));
 
     if plotQuartiles
@@ -120,12 +125,12 @@ if pairedDataFlag
     end
 end
 
-if plotMean
+if plotCentralTendency
     for pos=1:size(Y,2)
         patch(pos+[-1,1,1,-1]*(BoxWidth+0.005), ...
-            [meanData(pos)-semData(pos) meanData(pos)-semData(pos) meanData(pos)+semData(pos) meanData(pos)+semData(pos)], ...
+            [centralTendency(pos)-semData(pos) centralTendency(pos)-semData(pos) centralTendency(pos)+semData(pos) centralTendency(pos)+semData(pos)], ...
             [1 1 1]);
-        scatter(pos, meanData(pos), medianMarkerSize+10, [0 0 0], 'filled');
+        scatter(pos, centralTendency(pos), medianMarkerSize+10, [0 0 0], 'filled');
     end
 end
 
@@ -153,28 +158,18 @@ if showSignificance
     if commonYLim
         set(ax,'YLim',setYLim);
     else
-        set(ax,'YLim',[commonMin-yPositionLine*2 commonMax+yPositionLine*6]);
+        set(ax,'YLim',[commonMin-yPositionLine commonMax+yPositionLine*scaleFactor]);
     end
 
     % shows the p-value
     if p>0.05
-<<<<<<< HEAD
-        text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     elseif p>0.01
-        text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     elseif p>0.005
-        text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     else
-        text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-=======
-        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-    elseif p>0.01
-        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-    elseif p>0.005
-        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-    else
-        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
->>>>>>> 3ce27f8ce6b39d23a0398a8133cc6d8fdb1932be
+        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     end
 end
 end
