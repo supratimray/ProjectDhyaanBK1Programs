@@ -10,7 +10,11 @@ if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;    
 if ~isfield(displaySettings,'dataMarkerSize');    displaySettings.dataMarkerSize=12;              end
 if ~isfield(displaySettings,'medianMarkerSize');  displaySettings.medianMarkerSize=20;            end
 if ~isfield(displaySettings,'textFontSize');      displaySettings.textFontSize=8;                 end
+<<<<<<< HEAD
 if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=1.5;              end
+=======
+if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=0.5;              end
+>>>>>>> 3ce27f8ce6b39d23a0398a8133cc6d8fdb1932be
 if ~isfield(displaySettings,'xPositionText');     displaySettings.xPositionText=0.5;              end
 if ~isfield(displaySettings,'plotAxes');          displaySettings.plotAxes=gca;                   end
 if ~isfield(displaySettings,'showYTicks');        displaySettings.showYTicks=0;                   end
@@ -154,6 +158,7 @@ if showSignificance
 
     % shows the p-value
     if p>0.05
+<<<<<<< HEAD
         text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     elseif p>0.01
         text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
@@ -161,6 +166,15 @@ if showSignificance
         text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
     else
         text(mean(xPos)-xPositionText/2,commonMax+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+=======
+        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+    elseif p>0.01
+        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+    elseif p>0.005
+        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+    else
+        text(mean(xPos)-xPositionText/2,setYLim(2)+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+>>>>>>> 3ce27f8ce6b39d23a0398a8133cc6d8fdb1932be
     end
 end
 end
