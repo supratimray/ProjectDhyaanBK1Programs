@@ -10,7 +10,6 @@ if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;    
 if ~isfield(displaySettings,'dataMarkerSize');    displaySettings.dataMarkerSize=12;              end
 if ~isfield(displaySettings,'medianMarkerSize');  displaySettings.medianMarkerSize=20;            end
 if ~isfield(displaySettings,'textFontSize');      displaySettings.textFontSize=8;                 end
-if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=1.5;              end
 if ~isfield(displaySettings,'yPositionLine');     displaySettings.yPositionLine=0.5;              end
 if ~isfield(displaySettings,'xPositionText');     displaySettings.xPositionText=0.5;              end
 if ~isfield(displaySettings,'plotAxes');          displaySettings.plotAxes=gca;                   end

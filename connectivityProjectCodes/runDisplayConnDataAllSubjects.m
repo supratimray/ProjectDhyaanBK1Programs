@@ -1,4 +1,8 @@
-function runDisplayConnData
+% groupType - abs or rel. When set to absolute (abs), the electrode groups are fixed (e.g. occipital, central etc). When set to relative (rel), the groups are based on their distance from the seed electrodes
+
+function runDisplayConnDataAllSubjects(groupType)
+
+if ~exist('groupType','var');       groupType='rel';                    end
 
 fontSizeSmall = 10; fontSizeMedium = 12; fontSizeLarge = 16;
 backgroundColor = 'w'; panelHeight = 0.125;
@@ -37,9 +41,12 @@ analysisChoiceList2 = [{'bl'} {'st'} {'combined'}];
 hAnalysisChoice = uicontrol('Parent',hPanel2,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 1/3 0.5 1/3],'Style','popup','String',analysisChoiceList1,'FontSize',fontSizeSmall);
 
 % RefChoice
-uicontrol('Parent',hPanel2,'Unit','Normalized','Position',[0 0 0.5 1/3],'Style','text','String','Ref Choice','FontSize',fontSizeSmall);
-refChoiceList = [{'none'} protocolNameList];
-hRefChoice = uicontrol('Parent',hPanel2,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 0 0.5 1/3],'Style','popup','String',refChoiceList,'FontSize',fontSizeSmall);
+refElectrodeList{1} = [14 44 47]; refElectrodeListName{1} = 'LeftOccipital';
+refElectrodeList{2} = [19 49 52]; refElectrodeListName{2} = 'RightOccipital';
+refElectrodeList{3} = [16 17 18 48]; refElectrodeListName{3} = 'BackOccipital';
+
+uicontrol('Parent',hPanel2,'Unit','Normalized','Position',[0 0 0.5 1/3],'Style','text','String','Ref Elecs','FontSize',fontSizeSmall);
+hRefChoice = uicontrol('Parent',hPanel2,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 0 0.5 1/3],'Style','popup','String',refElectrodeListName,'FontSize',fontSizeSmall);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Bad Electrodes %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel3 = uipanel('Title','Bad Electrode Condition','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.325 1-panelHeight 0.15 panelHeight]);
@@ -54,16 +61,16 @@ uicontrol('Parent',hPanel3,'Unit','Normalized','Position',[0 1/3 0.5 1/3],'Style
 badTrialVersionList = {'v8'};
 hBadTrialVersion = uicontrol('Parent',hPanel3,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 1/3 0.5 1/3],'Style','popup','String',badTrialVersionList,'FontSize',fontSizeSmall);
 
-% Bad Electrode Choice
-uicontrol('Parent',hPanel3,'Unit','Normalized','Position',[0 0 0.5 1/3],'Style','text','String','BadElecChoice','FontSize',fontSizeSmall);
-badElectrodeChoiceList = [{'Reject badElectrodes of protocolName'} {'Reject common badElectrodes of all protocols'} {'Reject badElectrodes of G1'}];
-hBadElectrodeChoice = uicontrol('Parent',hPanel3,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 0 0.5 1/3],'Style','popup','String',badElectrodeChoiceList,'FontSize',fontSizeSmall);
+% % Bad Electrode Choice
+% uicontrol('Parent',hPanel3,'Unit','Normalized','Position',[0 0 0.5 1/3],'Style','text','String','BadElecChoice','FontSize',fontSizeSmall);
+% badElectrodeChoiceList = [{'Reject badElectrodes of protocolName'} {'Reject common badElectrodes of all protocols'} {'Reject badElectrodes of G1'}];
+% hBadElectrodeChoice = uicontrol('Parent',hPanel3,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 0 0.5 1/3],'Style','popup','String',badElectrodeChoiceList,'FontSize',fontSizeSmall);
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Freq Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel4 = uipanel('Title','Freq Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.475 1-panelHeight 0.15 panelHeight]);
-freqRangeList0{1} = [8 13];
-freqRangeList0{2} = [24 34];
-freqRangeList0{3} = [35 65];
+freqRangeList0{1} = [7 10];
+freqRangeList0{2} = [16 28];
+freqRangeList0{3} = [60 98];
 
 numFreqRanges = length(freqRangeList0);
 hFreqRangeMin = cell(1,numFreqRanges);
@@ -97,7 +104,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Cutoff Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel6 = uipanel('Title','Cutoffs','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.775 1-panelHeight 0.1 panelHeight]);
-cutoffList0 = [3 30]; cutoffNames = [{'Num Elecs'} {'Num Trials'}];
+cutoffList0 = [2 30]; cutoffNames = [{'Num Elecs'} {'Num Trials'}];
 
 numCutoffRanges = length(cutoffList0);
 hCutoffs = cell(1,numCutoffRanges);
@@ -117,15 +124,14 @@ uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0.5 1/3 0.5 1/3],'Sty
 uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 0 1 1/3],'Style','pushbutton','String','plot','FontSize',fontSizeMedium,'Callback',{@plot_Callback});
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-electrodeGroupList = getElectrodeGroups('EEG','actiCap64_UOL',0,'conn');
+electrodeGroupList = getElectrodeGroupsConn(groupType,1,'actiCap64_UOL');
 numGroups = length(electrodeGroupList);
-hAllPlots.hConn  =  getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.01,0.01,1);
+hAllPlots.hConn1 = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.01,0.01,1);
 hAllPlots.hConn2 = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.01,0.01,0);
-hAllPlots.hTopo0 = getPlotHandles(1,2,[0.66 0.7 0.3 0.15],0.002,0.002,1);
-hAllPlots.hTopo1 = getPlotHandles(1,3,[0.66 0.55 0.3 0.13],0.02,0.02,1);
-hAllPlots.hTopo2 = getPlotHandles(numFreqRanges,3,[0.66 0.05 0.3 0.45],0.02,0.02,1);
+hAllPlots.hTopoRef = getPlotHandles(1,2,[0.66 0.55 0.32 0.3],0.002,0.002,1);
+hAllPlots.hTopo  = getPlotHandles(numFreqRanges,2,[0.66 0.05 0.2 0.45],0,0,1);
+hAllPlots.hConn3 = getPlotHandles(numFreqRanges,1,[0.88 0.05 0.1 0.45],0.01,0.01,1);
 
-electrodeList = [19 49 52]; % [14 44 47], [19 49 52], [16 17 18 48]
 connMethod = 'ppc';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,13 +181,12 @@ connMethod = 'ppc';
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         protocolName = protocolNameList{get(hProtocol,'val')};
         analysisChoice = analysisChoiceList2{get(hAnalysisChoice,'val')};
-        refChoice = refChoiceList{get(hRefChoice,'val')};
+        refElectrodes = refElectrodeList{get(hRefChoice,'val')};
 
         badEyeCondition = badEyeConditionList2{get(hBadEye,'val')};
         badTrialVersion = badTrialVersionList{get(hBadTrialVersion,'val')};
-        badElectrodeRejectionFlag = get(hBadElectrodeChoice,'val');
 
-        stRange = [0.25 1.25]; % hard coded for now
+        % stRange = [0.25 1.25]; % hard coded for now
 
         freqRangeList = cell(1,numFreqRanges);
         for ii=1:numFreqRanges
@@ -200,15 +205,15 @@ connMethod = 'ppc';
 
         useMedianFlag = get(hUseMedianFlag,'val');
 
-        displayConnDataAllSubjects(subjectNameLists,protocolName,analysisChoice,electrodeList,connMethod,badEyeCondition,badTrialVersion,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag,1);
+        displayConnDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag,1);
 
     end
     function cla_Callback(~,~)
-        claGivenPlotHandle(hAllPlots.hConn);
+        claGivenPlotHandle(hAllPlots.hConn1);
         claGivenPlotHandle(hAllPlots.hConn2);
-        claGivenPlotHandle(hAllPlots.hTopo0);
-        claGivenPlotHandle(hAllPlots.hTopo1);
-        claGivenPlotHandle(hAllPlots.hTopo2);
+        claGivenPlotHandle(hAllPlots.hTopoRef);
+        claGivenPlotHandle(hAllPlots.hTopo);
+        claGivenPlotHandle(hAllPlots.hConn3);
 
         function claGivenPlotHandle(plotHandles)
             [numRows,numCols] = size(plotHandles);
@@ -223,8 +228,8 @@ connMethod = 'ppc';
         axisLims = [str2double(get(hAxisRangeMin{1},'String')) str2double(get(hAxisRangeMax{1},'String')) str2double(get(hAxisRangeMin{2},'String')) str2double(get(hAxisRangeMax{2},'String'))];
         cLims = [str2double(get(hAxisRangeMin{3},'String')) str2double(get(hAxisRangeMax{3},'String'))];
 
-        rescaleGivenPlotHandle(hAllPlots.hConn,axisLims);
-        rescaleZGivenPlotHandle(hAllPlots.hTopo2,cLims);
+        rescaleGivenPlotHandle(hAllPlots.hConn1,axisLims);
+        rescaleZGivenPlotHandle(hAllPlots.hTopo,cLims);
 
         function rescaleGivenPlotHandle(plotHandles,axisLims)
             [numRows,numCols] = size(plotHandles);
@@ -245,4 +250,3 @@ connMethod = 'ppc';
     end
 
 end
-
