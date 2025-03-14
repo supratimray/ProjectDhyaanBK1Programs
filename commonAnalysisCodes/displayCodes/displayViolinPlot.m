@@ -17,7 +17,7 @@ if ~isfield(displaySettings,'showYTicks');        displaySettings.showYTicks=0; 
 if ~isfield(displaySettings,'setYLim');           displaySettings.setYLim=[-7 7];                 end
 if ~isfield(displaySettings,'commonYLim');        displaySettings.commonYLim=0;                   end
 if ~isfield(displaySettings,'showXTicks');        displaySettings.showXTicks=1;                   end
-if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{'Med'},{'Con'}];  end
+if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{'Med'},{'Con'},{'Ref'}];  end
 if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=0;               end
 if ~isfield(displaySettings,'tickLengthMedium');  displaySettings.tickLengthMedium=[0.025 0];     end
 if ~isfield(displaySettings,'plotQuartiles');     displaySettings.plotQuartiles=0;                end
@@ -43,14 +43,17 @@ useMedianFlag    = displaySettings.medianFlag;
 
 % get the data in the cell array
 bandwidth = [];
-Y{:,1}=dataArray{1,1};
-Y{:,2}=dataArray{1,2};
+numGroups = size(dataArray, 2);
+Y = cell(1,numGroups);
+for i = 1:numGroups
+    Y{i} = dataArray{1,i};
+end
 
 % set Plot Options:
 axes(displaySettings.plotAxes);
 ax=gca;
 set(ax,'TickDir','out','TickLength',displaySettings.tickLengthMedium);
-ax.XTick=[1 2];
+ax.XTick=1:numGroups;
 if showXTicks
     ax.XTickLabel = xTickLabels;
 else
@@ -58,13 +61,31 @@ else
 end
 
 % calculate kernel density
-centralTendency = zeros(1,size(Y,2));
-semData         = zeros(2,size(Y,2));
-xPosDataGroups  = zeros(length(Y),length(Y{:,1}));
+centralTendency = zeros(1,numGroups);
+semData         = zeros(1,numGroups);
+xPosDataGroups  = zeros(numGroups,length(Y{1}));
 
-for pos=1:size(Y,2)
+for pos=1:numGroups
     width = 0.3;
     data = Y{pos};
+
+    % Check if data is all zeros or empty
+    if isempty(data) || all(data == 0)
+        % Draw a simple line at zero for zero vectors
+        plot([pos-width pos+width], [0 0], 'Color', colorArray{pos}, 'LineWidth', 2);
+        if showData
+            scatter(pos, 0, dataMarkerSize, 'filled', 'MarkerFaceColor', colorArray{pos});
+            if pairedDataFlag
+                xPosDataGroups(pos,:) = pos; % Set position to exact pos for zero data
+            end
+        end
+        centralTendency(pos) = 0;
+        semData(pos) = 0;
+        hold on
+        continue;
+    end
+
+    % Original density calculation for non-zero data
     [density, value] = ksdensity(data,'bandwidth',bandwidth);
     density = density(value >= min(data) & value <= max(data));
     value = value(value >= min(data) & value <= max(data));
@@ -117,15 +138,17 @@ for pos=1:size(Y,2)
 end
 
 if pairedDataFlag
-    for i=1:length(xPosDataGroups)
-        xPosLine = xPosDataGroups(:,i)';
-        yPosLine = [Y{1,1}(i) Y{1,2}(i)];
-        plot(xPosLine,yPosLine,'Color',[0.8 0.8 0.8]);
+    for i=1:size(xPosDataGroups,2) % loop through subjects
+        for j=1:numGroups-1 % loop through adjacent pairs
+            xPosLine = [xPosDataGroups(j,i) xPosDataGroups(j+1,i)];
+            yPosLine = [Y{j}(i) Y{j+1}(i)];
+            plot(xPosLine,yPosLine,'Color',[0.8 0.8 0.8]);
+        end
     end
 end
 
 if plotCentralTendency
-    for pos=1:size(Y,2)
+    for pos=1:numGroups
         patch(pos+[-1,1,1,-1]*(BoxWidth+0.005), ...
             [centralTendency(pos)-semData(pos) centralTendency(pos)-semData(pos) centralTendency(pos)+semData(pos) centralTendency(pos)+semData(pos)], ...
             [1 1 1]);
@@ -134,25 +157,35 @@ if plotCentralTendency
 end
 
 if showSignificance
-    if pairedDataFlag
+    if numGroups > 2
+        % Use ANOVA or Friedman test for multiple groups
+        % if pairedDataFlag
         if parametricTest
-            [~, p, ~, ~] = ttest(Y{:,1},Y{:,2});
+            [p,~,~] = anova1(cell2mat(Y),[],'off');
         else
-            % Perform Wilcoxon signed-rank test
-            [p, ~, ~] = signrank(Y{:,1},Y{:,2});
+            [p,~,~] = kruskalwallis(cell2mat(Y),[],'off');
         end
     else
-        if parametricTest
-            [~, p, ~, ~] = ttest2(Y{:,1},Y{:,2});
+        if pairedDataFlag
+            if parametricTest
+                [~, p, ~, ~] = ttest(Y{:,1},Y{:,2});
+            else
+                % Perform Wilcoxon signed-rank test
+                [p, ~, ~] = signrank(Y{:,1},Y{:,2});
+            end
         else
-            % Perform Mann-Whitney U test
-            [p,~,~] = ranksum(Y{:,1},Y{:,2});
+            if parametricTest
+                [~, p, ~, ~] = ttest2(Y{:,1},Y{:,2});
+            else
+                % Perform Mann-Whitney U test
+                [p,~,~] = ranksum(Y{:,1},Y{:,2});
+            end
         end
     end
 
-    xPos = 1:size(Y,2);
-    commonMax=max([max(Y{:,1}) max(Y{:,2})]);
-    commonMin = min([max(Y{:,1}) min(Y{:,2})]);
+    xPos = 1:numGroups;
+    commonMax = max(cellfun(@max, Y));
+    commonMin = min(cellfun(@min, Y));
 
     if commonYLim
         set(ax,'YLim',setYLim);
