@@ -164,6 +164,7 @@ for s=1:length(segmentList)
         % First check if reference is in refProtocolNameList
         refProtocolPosRefIndex = find(strcmp(refProtocolNameList,refChoice));
         isRefFromMainProtocol = 0;
+        compareRefFlag = 0;
         if isempty(refProtocolPosRefIndex)
             % If not found, check in protocolNameList
             isRefFromMainProtocol = 1;
@@ -347,6 +348,8 @@ if displayDataFlag
         displaySettings.plotAxes = hPower(j,4);
         displaySettings.xTickLabels = segmentList;
         displaySettings.parametricTest = 1;
+        displaySettings.compareRefFlag = compareRefFlag;
+        displaySettings.refIndex = refSubsegmentIndex;
         displayViolinPlot(combinedDataMed, [{[0.8 0 0]} {[0.5 0 0]} {[0.2 0 0]}], ...
             1, 1, 1, 1, displaySettings);
         % Plot controls
@@ -375,7 +378,7 @@ if displayDataFlag
     axes(hPSD(5));
     cla;
     displaySettingsGroupCon = displaySettings;
-   displaySettingsGroupCon.colorNames = [0 0 0.8 ; 0 0 0.5 ; 0 0 0.2];
+    displaySettingsGroupCon.colorNames = [0 0 0.8 ; 0 0 0.5 ; 0 0 0.2];
     displayAndcompareData(hPSD(5),allSegmentsPSD(2,:),freqVals,displaySettingsGroupCon,yLimsPSD,1,useMedianFlag,~pairedDataFlag,compareRefFlag,refSubsegmentIndex);
     title('Controls - All Segments');
     xlim(freqLims);

@@ -158,12 +158,29 @@ end
 
 if showSignificance
     if numGroups > 2
-        % Use ANOVA or Friedman test for multiple groups
-        % if pairedDataFlag
+        % Perform ANOVA/KW test first
         if parametricTest
-            [p,~,~] = anova1(cell2mat(Y),[],'off');
+            [p_anova,~,~] = anova1(cell2mat(Y),[],'off');
         else
-            [p,~,~] = kruskalwallis(cell2mat(Y),[],'off');
+            [p_anova,~,~] = kruskalwallis(cell2mat(Y),[],'off');
+        end
+
+        % If compareRefFlag is on, also do t-tests against reference
+        if isfield(displaySettings, 'compareRefFlag') && displaySettings.compareRefFlag && isfield(displaySettings, 'refIndex')
+            pairwise_p = zeros(1, numGroups);
+            for g = 1:numGroups
+                if g ~= displaySettings.refIndex
+                    if parametricTest
+                        if pairedDataFlag
+                            [~,pairwise_p(g)] = ttest(Y{displaySettings.refIndex}, Y{g});
+                        else
+                            [~,pairwise_p(g)] = ttest2(Y{displaySettings.refIndex}, Y{g});
+                        end
+                    else
+                        pairwise_p(g) = ranksum(Y{displaySettings.refIndex}, Y{g});
+                    end
+                end
+            end
         end
     else
         if pairedDataFlag
@@ -193,15 +210,66 @@ if showSignificance
         set(ax,'YLim',[commonMin-yPositionLine commonMax+yPositionLine*scaleFactor]);
     end
 
-    % shows the p-value
-    if p>0.05
-        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-    elseif p>0.01
-        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
-    elseif p>0.005
-        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+    % Show significance text
+    if numGroups > 2
+        % Calculate spacing for significance markers with larger gaps
+        ySpacing = yPositionLine * 1.25; 
+        baseYPos = commonMax + yPositionLine * 1.5; 
+
+        % Show ANOVA result at the top with extra spacing
+        text(mean(xPos), baseYPos + 2*ySpacing, ...
+            ['ANOVA: ' getSignificanceString(p_anova)], ...
+            'FontSize', textFontSize, ...
+            'FontWeight', 'bold', ...
+            'HorizontalAlignment', 'center');
+
+        % If compareRefFlag is on, show pairwise comparisons
+        if isfield(displaySettings, 'compareRefFlag') && displaySettings.compareRefFlag && isfield(displaySettings, 'refIndex')
+            % Position significance stars with larger vertical gaps
+            for g = 1:numGroups
+                if g ~= displaySettings.refIndex && pairwise_p(g) <= 0.05
+                    if g < displaySettings.refIndex
+                        xPos = g;
+                        yPos = baseYPos - 1.5*ySpacing*(displaySettings.refIndex - g);
+                    else
+                        xPos = g;
+                        yPos = baseYPos - 1.5*ySpacing*(g - displaySettings.refIndex);
+                    end
+
+                    % Draw connection line to reference with adjusted position
+                    plot([xPos displaySettings.refIndex], [yPos-ySpacing/3 yPos-ySpacing/3], ...
+                        'Color', [0.5 0.5 0.5], 'LineStyle', ':');
+
+                    % Add significance star with larger font
+                    text(xPos, yPos, getSignificanceString(pairwise_p(g)), ...
+                        'FontSize', textFontSize * 1.2, ... % Slightly larger font
+                        'FontWeight', 'bold', ...
+                        'HorizontalAlignment', 'center');
+                end
+            end
+        end
     else
-        text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        if p>0.05
+            text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['N.S. (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        elseif p>0.01
+            text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['* (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        elseif p>0.005
+            text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        else
+            text(mean(xPos)-xPositionText/scaleFactor,commonMax+yPositionLine,['*** (' num2str(round(p,3)) ')'],'FontSize',textFontSize,'FontWeight','bold');
+        end
     end
+end
+end
+
+function str = getSignificanceString(p)
+if p > 0.05
+    str = 'n.s.';
+elseif p > 0.01
+    str = '*';
+elseif p > 0.005
+    str = '**';
+else
+    str = '***';
 end
 end
