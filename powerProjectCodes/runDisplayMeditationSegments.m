@@ -126,11 +126,14 @@ uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 0 1 2/5],'Style','p
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define segment list for meditation protocols
 segmentList = [{'a'} {'b'} {'c'}];
+numSegments = length(segmentList);
 
 % Get plot handles using getPlotHandles
-hAllPlots.hPSD = getPlotHandles(1, 5, [0.05 0.62 0.9 0.2], 0.02, 0.02, 1);
-hAllPlots.hPower = getPlotHandles(3, 5, [0.05 0.06 0.55 0.5], 0.02, 0.02, 0);
-hAllPlots.hTopo = getPlotHandles(3, 6, [0.62 0.06 0.36 0.5], 0.001, 0.02, 1);
+hAllPlots.hPSD = getPlotHandles(1, numSegments+2, [0.05 0.62 0.9 0.2], 0.02, 0.02, 1);
+hAllPlots.hPower = getPlotHandles(numFreqRanges, numSegments+2, [0.05 0.06 0.55 0.5], 0.02, 0.02, 0);
+hAllPlots.hTopo = getPlotHandles(numFreqRanges, 2*numSegments, [0.62 0.06 0.36 0.5], 0.001, 0.02, 1);
+
+stRange = [0.25 1.25];
 
     function plot_Callback(~,~)
 
@@ -178,7 +181,6 @@ hAllPlots.hTopo = getPlotHandles(3, 6, [0.62 0.06 0.36 0.5], 0.001, 0.02, 1);
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         % Get GUI parameters
-        comparisonStr = comparisonList{get(hComparison,'val')};
         protocolStr = protocolList{get(hProtocol,'val')};
         analysisChoice = analysisChoiceList2{get(hAnalysisType,'val')};
         refChoice = refChoiceList{get(hRefChoice,'val')};
@@ -207,9 +209,9 @@ hAllPlots.hTopo = getPlotHandles(3, 6, [0.62 0.06 0.36 0.5], 0.001, 0.02, 1);
         end
 
         % main function
-        displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, comparisonStr, protocolStr, ...
+        displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, protocolStr, ...
             analysisChoice, refChoice, badEyeCondition, badTrialVersion, badElectrodeRejectionFlag, ...
-            freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice);
+            stRange,freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice);
     end
 
     function rescale_Callback(~,~)

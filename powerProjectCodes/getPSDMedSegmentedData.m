@@ -71,10 +71,11 @@ end
 t = load(timingFile);
 timeVals = t.timeVals;
 Fs = round(1/(timeVals(2)-timeVals(1)));
+T = diff(stRange);
 
 % Calculate time indices
 goodTimePosST = find(timeVals>=stRange(1),1) + (1:round(Fs*diff(stRange)));
-blRange = [-diff(stRange) 0];
+blRange = [-T 0];
 goodTimePosBL = find(timeVals>=blRange(1),1) + (1:round(Fs*diff(blRange)));
 
 % Set up multitaper parameters
@@ -95,8 +96,8 @@ numTrials = length(goodTrials);
 fprintf('Found %d good trials in range %d-%d\n', numTrials, startTrial, endTrial);
 
 if numTrials > 0
-    psdValsST = zeros(numElectrodes, length(params.fpass(1):params.fpass(2)));
-    psdValsBL = zeros(numElectrodes, length(params.fpass(1):params.fpass(2)));
+    psdValsST = zeros(numElectrodes, length(params.fpass(1):1/T:params.fpass(2)));
+    psdValsBL = zeros(numElectrodes, length(params.fpass(1):1/T:params.fpass(2)));
 
     for i=1:numElectrodes
         e = load(fullfile(folderSegment,'LFP',['elec' num2str(electrodeList(i)) '.mat']));

@@ -12,9 +12,9 @@
 
 % adapted and modified from 'displayPowerDataAllSubjects'
 
-function [psdDataToReturn,powerDataToReturn,goodSubjectNameListsToReturn,topoplotDataToReturn,freqVals] =  displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, ~, protocolStr, ...
+function [psdDataToReturn,powerDataToReturn,goodSubjectNameListsToReturn,topoplotDataToReturn,freqVals] =  displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, protocolStr, ...
     analysisChoice, refChoice, badEyeCondition, badTrialVersion, badElectrodeRejectionFlag, ...
-    freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice)
+    stRange,freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice)
 
 if ~exist('protocolStr','var');                 protocolStr='G1';               end
 if ~exist('analysisChoice','var');              analysisChoice='st';            end
@@ -79,14 +79,15 @@ saveFolderName = 'savedDataMedSegmented';
 
 [electrodeGroupList,groupNameList] = getElectrodeGroups(gridType,capType);
 numGroups = length(electrodeGroupList);
+numSegments = length(segmentList);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Generate plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if displayDataFlag
     if isempty(hAllPlots)
-        hPSD   = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.02,0.02,1);
-        hPower = getPlotHandles(numFreqRanges, length(segmentList)*2, [0.05 0.05 0.6 0.45], 0.02, 0.02, 0);
-        hTopo  = getPlotHandles(numFreqRanges, length(segmentList)*2, [0.675 0.05 0.3 0.45], 0.02, 0.02, 1);
+        hPSD   = getPlotHandles(1,numSegments+2,[0.05 0.55 0.6 0.3],0.02,0.02,1);
+        hPower = getPlotHandles(numFreqRanges, numSegments+2, [0.05 0.05 0.6 0.45], 0.02, 0.02, 0);
+        hTopo  = getPlotHandles(numFreqRanges, 2*numSegments, [0.675 0.05 0.3 0.45], 0.02, 0.02, 1);
     else
         hPSD   = hAllPlots.hPSD;
         hPower = hAllPlots.hPower;
@@ -96,12 +97,12 @@ if displayDataFlag
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-protocolNameList    = [{'M1a'} {'M1b'} {'M1c'} {'M2a'} {'M2b'} {'M2c'}];
-refProtocolNameList = [{'EO1'} {'EC1'} {'G1'}  {'M1'}  {'G2'}  {'EO2'} {'EC2'} {'M2'}];
+protocolNameList    = [{'M1a'} {'M1b'} {'M1c'} {'M2a'} {'M2b'} {'M2c'}]; % also called the "Main" protocol list
+refProtocolNameList = [{'EO1'} {'EC1'} {'G1'}  {'M1'}  {'G2'}  {'EO2'} {'EC2'} {'M2'}]; % Reference protocol list containing the original 8 protocols
 
 % Initialize arrays to collect PSD data for all segments
-allSegmentsPSD = cell(2, length(segmentList)); % {meditators/controls, segments}
-goodSubjectNameListsTMP = cell(length(segmentList),2);
+allSegmentsPSD = cell(2, numSegments); % {meditators/controls, segments}
+goodSubjectNameListsTMP = cell(numSegments,2);
 
 if contains(protocolStr,'M1')
     protocolBaseIndex=0;
@@ -112,7 +113,7 @@ else
 end
 
 % get good subject's segmentWise
-for s=1:length(segmentList)
+for s=1:numSegments
     protocolName = protocolNameList{protocolBaseIndex+s};
     protocolPos = find(strcmp(protocolNameList,protocolName));
     if ~strcmp(refChoice,'none')
@@ -124,7 +125,6 @@ for s=1:length(segmentList)
             % If not found, check in protocolNameList
             refProtocolPosRefIndex = find(strcmp(protocolNameList,refChoice));
             isRefFromMainProtocol = 1;
-            compareRefFlag = 1;
             % Determine which subsegment (a/b/c) is being used as reference
             refSubsegmentIndex = mod(refProtocolPosRefIndex-1,3) + 1;
         end
@@ -133,12 +133,11 @@ for s=1:length(segmentList)
         protocolPosRef = [];
         isRefFromMainProtocol = 0;
         refSubsegmentIndex = 0;
-        compareRefFlag = 0;
     end
     goodSubjectNameListsTMP(s,:) = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName,baseFolderName,timeCuttOff,protocolToCheckIndex,isRefFromMainProtocol);
 end
 
-%%%%%%%%%%%%%%%%%%% Get common subjects across segments %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% Get common subjects across segments %%%%%%%%%%%%%%%%%%%
 % start with first segment's subjects
 meditatorList = goodSubjectNameListsTMP{1,1};
 controlList   = goodSubjectNameListsTMP{1,2};
@@ -152,8 +151,8 @@ goodSubjectNameListsGrouped = {meditatorList, controlList};
 % Initialize data collection arrays before segment loop
 allSegmentsPower = {cell(length(segmentList), numFreqRanges), cell(length(segmentList), numFreqRanges)}; % {meditators, controls}
 
-%%%%%%%%%%%%%%%%%%%% Get and plot data for the segments  %%%%%%%%%%%%%%%%%%%%%
-for s=1:length(segmentList)
+%%%%%%%%%%%%%%%%%%%% Get and plot data for the segments  %%%%%%%%%%%%%%%%%%
+for s=1:numSegments
     protocolName = protocolNameList{protocolBaseIndex+s};
     protocolPos  = find(strcmp(protocolNameList,protocolName));
 
@@ -420,6 +419,7 @@ for i=1:2
         protocolLengthTime = protocolLengthTimes(protcolToCheckIndex);
 
         if protocolLengthTime>timeCuttOff
+            disp(['Timing cutoff exceeded for subject: ' subjectName]);
             badSubjectIndexTMP(j)=1;
         end
 

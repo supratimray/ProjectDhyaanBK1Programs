@@ -6,7 +6,7 @@
 % from the 'wo' condition and then appends the extra bad trials based on
 % eye data analysis.
 
-folderSourceString = 'D:\Projects\ProjectDhyaan\BK1';
+folderSourceString = 'N:\Projects\ProjectDhyaan\BK1';
 
 goodSubjectList = getGoodSubjectsBK1;
 [allSubjectNames,expDateList] = getDemographicDetails('BK1');
