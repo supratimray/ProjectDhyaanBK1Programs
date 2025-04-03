@@ -1,7 +1,28 @@
+% runDisplayMeditationSegments.m
+%
+% A GUI for analyzing and visualizing EEG data from meditation experiments.
+% This interface allows to:
+%   - Select subjects based on demographics (gender, age) and comparison type
+%   - Choose meditation protocols and analysis parameters
+%   - Configure frequency ranges and electrode selections
+%   - Set visualization parameters for power spectral density plots and topographic maps
+%   - Compare meditation segments across different conditions
+%
+% Related functions:
+%   displayPowerDataAllSubjectsMedSegmented - Display power data for meditation segments
+
 function runDisplayMeditationSegments
 
-fontSizeSmall = 10; fontSizeMedium = 12; fontSizeLarge = 16;
-backgroundColor = 'w'; panelHeight = 0.125;
+% Define font sizes for GUI elements
+fontSizeSmall = 10;  % For small text elements
+fontSizeMedium = 12; % For medium-sized text elements
+fontSizeLarge = 16;  % For panel titles and large text
+
+% Define appearance settings
+backgroundColor = 'w'; % Set white background for GUI elements
+panelHeight = 0.125;  % Height of panels in normalized units
+
+% Set colormap for plots and topoplots
 colormap jet
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Subject Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -214,6 +235,7 @@ stRange = [0.25 1.25];
             stRange,freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice);
     end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sub-Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function rescale_Callback(~,~)
         axisLims = [str2double(get(hAxisRangeMin{1},'String')) str2double(get(hAxisRangeMax{1},'String')) ...
             str2double(get(hAxisRangeMin{2},'String')) str2double(get(hAxisRangeMax{2},'String'))];

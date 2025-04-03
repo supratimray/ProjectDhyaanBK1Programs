@@ -1,33 +1,68 @@
-% analysisChoice - 'st', 'bl' or 'combined'
-% refChoice - 'none' (show raw PSDs and power) or a protocolName. For
-% example, if refChoice is 'G1' then we use G1 baseline as reference.
-
-% badTrialRejectionFlag:
-% 1: Reject badElectrodes of protocolName
-% 2. Reject common badElectrodes of all protocols
-% 3: Reject badElectrodes of G1
-
-% Option added to return PSD, power and topoplot data. Also to simply
-% return these without displaying here
-
-% adapted and modified from 'displayPowerDataAllSubjects'
+% displayPowerDataAllSubjectsMedSegmented
+%
+% This function analyzes and visualizes EEG power spectra across different
+% meditation segments for groups of subjects. It compares between
+% meditators and controls, with flexible options for reference conditions,
+% frequency bands of interest, and electrode grouping.
+%
+% Usage:
+%   [psdData, powerData, goodSubjectLists, topoplotData, freqVals] = ...
+%   displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, ...)
+%
+% Parameters:
+%   hAllPlots           - Plot handles structure or [] to create new plots
+%   subjectNameLists    - Cell array of subject name lists {meditators, controls}
+%   segmentList         - Cell a    rray of segment names to analyze
+%   protocolStr         - Protocol string ('M1' or 'M2'), default 'G1'
+%   analysisChoice      - Analysis type: 'st' (stimulus), 'bl' (baseline), 'combined'
+%   refChoice           - Reference condition: 'none' or protocol name (e.g., 'G1')
+%   badEyeCondition     - Bad eye condition type (default: 'ep')
+%   badTrialVersion     - Bad trial version (default: 'v8')
+%   badElectrodeRejectionFlag - How to handle bad electrodes:
+%                              1: Reject bad electrodes of current protocol
+%                              2: Reject common bad electrodes across all protocols
+%                              3: Reject bad electrodes of G1
+%   stRange             - Stimulus time range [start end] in seconds
+%   freqRangeList       - Cell array of frequency ranges to analyze
+%   useMedianFlag       - Use median (1) or mean (0) for averaging
+%   axisRangeList       - Cell array of axis limits for plots
+%   cutoffList          - Thresholds: [min electrodes, min trials, max duration]
+%   pairedDataFlag      - Whether data is paired (1) or unpaired (0)
+%   elecChoice          - Electrode grouping ('Occipital' or 'Frontal')
+%
+% Returns:
+%   psdDataToReturn       - PSD data for all conditions
+%   powerDataToReturn     - Power data across frequency bands
+%   goodSubjectNameListsToReturn - Lists of subjects passing quality criteria
+%   topoplotDataToReturn  - Topographic data for visualization
+%   freqVals              - Frequency values (Hz)
+%
+% Related functions:
+%   runDisplayMeditationSegments - GUI for meditation segment analysis
+%
+% Notes:
+%   - This function is adapted from displayPowerDataAllSubjects
+%   - The function handles paired and unpaired data differently to ensure
+%     appropriate statistical comparisons
 
 function [psdDataToReturn,powerDataToReturn,goodSubjectNameListsToReturn,topoplotDataToReturn,freqVals] =  displayPowerDataAllSubjectsMedSegmented(hAllPlots, subjectNameLists, segmentList, protocolStr, ...
     analysisChoice, refChoice, badEyeCondition, badTrialVersion, badElectrodeRejectionFlag, ...
     stRange,freqRangeList, useMedianFlag, axisRangeList, cutoffList, pairedDataFlag, elecChoice)
 
-if ~exist('protocolStr','var');                 protocolStr='G1';               end
-if ~exist('analysisChoice','var');              analysisChoice='st';            end
-if ~exist('refChoice','var');                   refChoice='none';               end
-if ~exist('badEyeCondition','var');             badEyeCondition='ep';           end
-if ~exist('badTrialVersion','var');             badTrialVersion='v8';           end
-if ~exist('badElectrodeRejectionFlag','var');   badElectrodeRejectionFlag=1;    end
-if ~exist('stRange','var');                     stRange = [0.25 1.25];          end
-if ~exist('elecChoice','var');                  elecChoice = 'Occipital';       end
-if ~exist('useMedianFlag','var');               useMedianFlag = 0;              end
-if ~exist('hAllPlots','var');                   hAllPlots = [];                 end
-if ~exist('pairedDataFlag','var');              pairedDataFlag = 0;             end
-if ~exist('displayDataFlag','var');             displayDataFlag = 1;            end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Variable Initialization %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This section checks and initializes variables if they don't exist or are empty
+if ~exist('protocolStr','var') || isempty(protocolStr);                 protocolStr='G1';               end
+if ~exist('analysisChoice','var') || isempty(analysisChoice);           analysisChoice='st';            end
+if ~exist('refChoice','var') || isempty(refChoice);                     refChoice='none';               end
+if ~exist('badEyeCondition','var') || isempty(badEyeCondition);         badEyeCondition='ep';           end
+if ~exist('badTrialVersion','var') || isempty(badTrialVersion);         badTrialVersion='v8';           end
+if ~exist('badElectrodeRejectionFlag','var');                           badElectrodeRejectionFlag=1;    end
+if ~exist('stRange','var') || isempty(stRange);                         stRange = [0.25 1.25];          end
+if ~exist('elecChoice','var') || isempty(elecChoice);                   elecChoice = 'Occipital';       end
+if ~exist('useMedianFlag','var');                                       useMedianFlag = 0;              end
+if ~exist('hAllPlots','var');                                           hAllPlots = [];                 end
+if ~exist('pairedDataFlag','var');                                      pairedDataFlag = 0;             end
+if ~exist('displayDataFlag','var');                                     displayDataFlag = 1;            end
 
 if ~exist('freqRangeList','var')
     freqRangeList{1} = [8 13];  % alpha
@@ -42,14 +77,19 @@ end
 if ~exist('cutoffList','var')
     cutoffList = [3 30 20];
 end
-cutoffNumElectrodes = cutoffList(1);
-cutoffNumTrials     = cutoffList(2);
-timeCuttOff         = cutoffList(3);
 
+% Get the cutoff thresholds from the cutoffList parameter
+cutoffNumElectrodes = cutoffList(1);  % Minimum number of good electrodes required per subject
+cutoffNumTrials     = cutoffList(2);  % Minimum number of trials required per condition
+timeCutoff          = cutoffList(3);  % Maximum protocol duration for M1/M2 (in minutes) for inclusion
+
+% Determine which electrode group to analyze based on elecChoice
 if strcmp(elecChoice,'Occipital')
-    elecGroup           = 1;
+    % Use occipital electrode group (index 1)
+    elecGroup = 1;
 else
-    elecGroup           = 2; % frontal
+    % Use frontal electrode group (index 2) as default
+    elecGroup = 2;
 end
 
 numFreqRanges = length(freqRangeList);
@@ -59,10 +99,34 @@ displaySettings.fontSizeLarge       = 10;
 displaySettings.tickLengthMedium    = [0.01 0];
 
 % default colors
-displaySettings.colorNames(1,:)     = [0.8 0 0.8];      % Purple
-displaySettings.colorNames(2,:)     = [0.25 0.41 0.88]; % Cyan
-displaySettingsGroupMed.colorNames  = [0.8  0  0   ; 0.5 0  0   ;  0.2  0  0  ];     % Light to dark red shades
-displaySettingsGroupCon.colorNames  = [0    0  0.8 ; 0   0  0.5 ;  0    0  0.2];
+% Define color gradients for visualization
+
+% Meditators: Red gradient from light to dark
+% displaySettingsGroupMed.colorNames = [
+%     0.8 0.0 0.0;  % Light red
+%     0.5 0.0 0.0;  % Medium red
+%     0.2 0.0 0.0   % Dark red
+%     ];
+% 
+% % Controls: Blue gradient from light to dark
+% displaySettingsGroupCon.colorNames = [
+%     0.0 0.0 0.8;  % Light blue
+%     0.0 0.0 0.5;  % Medium blue
+%     0.0 0.0 0.2   % Dark blue
+%     ];
+
+% other color options (pink and cyan shades)
+displaySettingsGroupMed.colorNames = [
+    0.8026  0.3880  0.6052
+    0.8732  0.1307  0.4732
+    0.6039  0.1000  0.3216
+];
+
+displaySettingsGroupCon.colorNames = [
+    0.0000  0.5650  0.8307
+    0.0301  0.3610  0.8000
+    0.0800  0.1510  0.7800
+];
 
 titleStr{1} = 'Meditators';
 titleStr{2} = 'Controls';
@@ -93,10 +157,16 @@ if displayDataFlag
         hPower = hAllPlots.hPower;
         hTopo  = hAllPlots.hTopo;
     end
-    x = load([capType '.mat']); montageChanlocs = x.chanlocs;
+    try
+        x = load([capType '.mat']);
+        montageChanlocs = x.chanlocs;
+    catch ME
+        error('Error loading channel locations: %s', ME.message);
+    end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Protocol Position %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 protocolNameList    = [{'M1a'} {'M1b'} {'M1c'} {'M2a'} {'M2b'} {'M2c'}]; % also called the "Main" protocol list
 refProtocolNameList = [{'EO1'} {'EC1'} {'G1'}  {'M1'}  {'G2'}  {'EO2'} {'EC2'} {'M2'}]; % Reference protocol list containing the original 8 protocols
 
@@ -105,137 +175,134 @@ allSegmentsPSD = cell(2, numSegments); % {meditators/controls, segments}
 goodSubjectNameListsTMP = cell(numSegments,2);
 
 if contains(protocolStr,'M1')
-    protocolBaseIndex=0;
-    protocolToCheckIndex = 1; % check timeCuttoff
+    baseProtocolIndex=0;
+    protocolToCheckTimeIndex = 1; % setting protocol index for using the timeCuttoff
 else
-    protocolBaseIndex=3;
-    protocolToCheckIndex = 2; % for M2
+    baseProtocolIndex=3;
+    protocolToCheckTimeIndex = 2; % for M2
 end
 
-% get good subject's segmentWise
-for s=1:numSegments
-    protocolName = protocolNameList{protocolBaseIndex+s};
-    protocolPos = find(strcmp(protocolNameList,protocolName));
-    if ~strcmp(refChoice,'none')
-        % First check if reference is in refProtocolNameList
-        refProtocolPosRefIndex = find(strcmp(refProtocolNameList,refChoice));
-        isRefFromMainProtocol = 0;
-        refSubsegmentIndex = 0;
-        if isempty(refProtocolPosRefIndex)
-            % If not found, check in protocolNameList
-            refProtocolPosRefIndex = find(strcmp(protocolNameList,refChoice));
-            isRefFromMainProtocol = 1;
-            % Determine which subsegment (a/b/c) is being used as reference
-            refSubsegmentIndex = mod(refProtocolPosRefIndex-1,3) + 1;
-        end
-        protocolPosRef = refProtocolPosRefIndex;
-    else
-        protocolPosRef = [];
-        isRefFromMainProtocol = 0;
-        refSubsegmentIndex = 0;
+%%%%%%%%%%%%%%%%%%%%%%%%%%% get good subject's segmentWise %%%%%%%%%%%%%%%%
+
+% Pre-calculate reference protocol position and flags outside the loop
+isRefFromMainProtocol = 0;
+refSubsegmentIndex = 0;
+compareRefFlag = 0;
+if ~strcmp(refChoice,'none')
+    % First check if reference is in 'reference' ProtocolNameList
+    protocolPosRef = find(strcmp(refProtocolNameList,refChoice));
+    if isempty(protocolPosRef)
+        % If not found, check in 'Main' protocolNameList (segments of M1/M2)
+        protocolPosRef = find(strcmp(protocolNameList,refChoice));
+        % Determine which subsegment (a/b/c) is being used as reference
+        refSubsegmentIndex = mod(protocolPosRef-1,3) + 1;
+        % update the flag
+        isRefFromMainProtocol = 1;
+        compareRefFlag = 1;
     end
-    goodSubjectNameListsTMP(s,:) = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName,baseFolderName,timeCuttOff,protocolToCheckIndex,isRefFromMainProtocol);
+else
+    protocolPosRef = [];
 end
 
-%%%%%%%%%%%%%%%%%%% Get common subjects across segments %%%%%%%%%%%%%%%%%%%
-% start with first segment's subjects
-meditatorList = goodSubjectNameListsTMP{1,1};
-controlList   = goodSubjectNameListsTMP{1,2};
-for s=2:size(goodSubjectNameListsTMP,1)
-    % find common subject's across all segments
+% Loop through segments and get good subjects
+for s=1:numSegments
+    protocolName = protocolNameList{baseProtocolIndex+s};
+    protocolPos = find(strcmp(protocolNameList,protocolName));
+    goodSubjectNameListsTMP(s,:) = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName,baseFolderName,timeCutoff,protocolToCheckTimeIndex,isRefFromMainProtocol);
+end
+
+%%%%%%%%%%%%%%%%%%% Get common good subjects across segments %%%%%%%%%%%%%%
+
+% Get common subjects across all segments
+meditatorList = goodSubjectNameListsTMP{1,1}; % Start with first segment
+controlList = goodSubjectNameListsTMP{1,2};
+for s = 2:numSegments
+    % Keep only subjects that appear in all segments
     meditatorList = intersect(meditatorList, goodSubjectNameListsTMP{s,1});
-    controlList   = intersect(controlList, goodSubjectNameListsTMP{s,2});
+    controlList = intersect(controlList, goodSubjectNameListsTMP{s,2});
 end
-goodSubjectNameListsGrouped = {meditatorList, controlList};
-
-% Initialize data collection arrays before segment loop
-allSegmentsPower = {cell(length(segmentList), numFreqRanges), cell(length(segmentList), numFreqRanges)}; % {meditators, controls}
+disp(['Common subjects: ' num2str(length(meditatorList)) ' meditators, ' num2str(length(controlList)) ' controls']);
+commonGoodSubjectLists = {meditatorList, controlList};
 
 %%%%%%%%%%%%%%%%%%%% Get and plot data for the segments  %%%%%%%%%%%%%%%%%%
+
+lineNoiseRange = [48 52];
+allSegmentsPower = {cell(length(segmentList), numFreqRanges), cell(length(segmentList), numFreqRanges)}; % {meditators, controls}
 for s=1:numSegments
-    protocolName = protocolNameList{protocolBaseIndex+s};
+    protocolName = protocolNameList{baseProtocolIndex+s};
     protocolPos  = find(strcmp(protocolNameList,protocolName));
 
     displaySettings.colorNames(1,:)=displaySettingsGroupMed.colorNames(s,:);
     displaySettings.colorNames(2,:)=displaySettingsGroupCon.colorNames(s,:);
 
-    if ~strcmp(refChoice,'none')
-        % First check if reference is in refProtocolNameList
-        refProtocolPosRefIndex = find(strcmp(refProtocolNameList,refChoice));
-        isRefFromMainProtocol = 0;
-        compareRefFlag = 0;
-        if isempty(refProtocolPosRefIndex)
-            % If not found, check in protocolNameList
-            isRefFromMainProtocol = 1;
-            compareRefFlag = 1;
-            refProtocolPosRefIndex = find(strcmp(protocolNameList,refChoice));
-        end
-        protocolPosRef = refProtocolPosRefIndex;
-    else
-        protocolPosRef = [];
-        isRefFromMainProtocol = 0;
-        compareRefFlag = 0;
-    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    [powerData,powerDataRef,freqVals] = getPowerDataAllSubjects(commonGoodSubjectLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,saveFolderName,baseFolderName,isRefFromMainProtocol);
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Get Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    goodSubjectNameLists = goodSubjectNameListsGrouped;
-    [powerData,powerDataRef,freqVals] = getPowerDataAllSubjects(goodSubjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,saveFolderName,baseFolderName,isRefFromMainProtocol);
-
-    %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%%%%
-    freqPosList = cell(1,numFreqRanges);
-    lineNoiseRange = [48 52];
+    %%%%%%%%%%%%%%%%%%%%%%% Get frequency positions %%%%%%%%%%%%%%%%%%%%%%%
     badFreqPos = intersect(find(freqVals>=lineNoiseRange(1)),find(freqVals<=lineNoiseRange(2)));
+    freqPosList = cell(1,numFreqRanges); % Preallocate cell array
     for i = 1:numFreqRanges
         freqPosList{i} = setdiff(intersect(find(freqVals>=freqRangeList{i}(1)),find(freqVals<freqRangeList{i}(2))),badFreqPos);
     end
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%% Show Topoplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%% Plot Topoplots %%%%%%%%%%%%%%%%%%%%%%%%%%%%
     numElectrodes = size(powerData{1},1);
     comparisonData = zeros(numFreqRanges,2,numElectrodes);
     topoplotDataToReturn = cell(2,numFreqRanges);
 
-    for i=1:2
+    for i=1:2 % Loop through groups (1=Meditators, 2=Controls)
         for j=1:numFreqRanges
+            % Calculate power for frequency band
+            freqBandPower = sum(powerData{i}(:,freqPosList{j},:),2);
+
+            % Calculate log power or relative change
             if isempty(protocolPosRef)
-                x = log10(sum(powerData{i}(:,freqPosList{j},:),2));
+                powerValues = log10(freqBandPower);
             else
-                x = 10*(log10(sum(powerData{i}(:,freqPosList{j},:),2)) - log10(sum(powerDataRef{i}(:,freqPosList{j},:),2)));
+                refPower = sum(powerDataRef{i}(:,freqPosList{j},:),2);
+                powerValues = 10*(log10(freqBandPower) - log10(refPower));
             end
+
+            % Get average/median power across trials
             if useMedianFlag
-                data = squeeze(median(x,3,'omitnan'));
+                data = squeeze(median(powerValues,3,'omitnan'));
             else
-                data = squeeze(mean(x,3,'omitnan'));
+                data = squeeze(mean(powerValues,3,'omitnan'));
             end
+
+            % Store results
             comparisonData(j,i,:) = data;
             topoplotDataToReturn{i,j} = data;
+
+            % Create topoplot if display is enabled
             if displayDataFlag
                 if i == 1 % Meditators
                     plotCol = s;
                 else % Controls
                     plotCol = length(segmentList) + s;
                 end
-                axes(hTopo(j,plotCol));
-                topoplot(data,montageChanlocs,'electrodes','on','maplimits',cLimsTopo,'plotrad',0.6,'headrad',0.6);
-                if j==1        % Add titles only for first row
-                    if i == 1
-                        title([protocolName '-M']);
-                    else
-                        title([protocolName '-C']);
-                    end
+                set(gcf, 'CurrentAxes', hTopo(j,plotCol));
+                topoplot(data, montageChanlocs, 'electrodes', 'on', ...
+                    'maplimits', cLimsTopo, 'plotrad', 0.6, 'headrad', 0.6);
+
+                % Add title for first row only
+                if j==1
+                    groupLabel = {'M','C'};
+                    title([protocolName '-' groupLabel{i}]);
                 end
             end
         end
     end
 
-    %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%% Plots PSDs and power %%%%%%%%%%%%%%%%%%%%%%%%%%%
     psdDataToReturn = cell(1,numGroups);
     powerDataToReturn = cell(numGroups,numFreqRanges);
     goodSubjectNameListsToReturn = cell(numGroups,2);
 
+    %%%%%%%%%%%%% Find bad subjects based on electrode cutoff %%%%%%%%%
     for i=elecGroup % numGroups
-        %%%%%%%%%%%%% Find bad subjects based on electrode cutoff %%%%%%%%%%%%%
         badSubjectPosList = cell(1,2);
-        for j=1:2
+        for j=1:2 % meditators and controls
             pData = powerData{j}(electrodeGroupList{i},:,:);
             numGoodElecs = length(electrodeGroupList{i}) - sum(isnan(squeeze(pData(:,1,:))),1);
             badSubjectPosList{j} = find(numGoodElecs<cutoffNumElectrodes);
@@ -254,19 +321,19 @@ for s=1:numSegments
             badSubjectPosList{2} = badSubjectPosList{1};
         end
 
-        % Get data
-        meanPSDData = cell(1,2);
-        meanPSDDataRef = cell(1,2);
-        logPSDData = cell(1,2);
+        % Get power data
+        meanPSDData     = cell(1,2);
+        logPSDData      = cell(1,2);
+        meanPSDDataRef  = cell(1,2);
 
-        for j=1:2
+        for j=1:2 % meditators and controls
             pData = powerData{j}(electrodeGroupList{i},:,:);
             if ~isempty(protocolPosRef)
                 pDataRef = powerDataRef{j}(electrodeGroupList{i},:,:);
             end
             badSubjectPos = badSubjectPosList{j};
 
-            tmp = goodSubjectNameLists{j};
+            tmp = commonGoodSubjectLists{j};
             tmp(badSubjectPos) = [];
             goodSubjectNameListsToReturn{i,j} = tmp;
 
@@ -304,7 +371,7 @@ for s=1:numSegments
             xlim(hPSD(s),freqLims);
 
             if ~isempty(protocolPosRef)
-                axes(hPSD(s));
+                set(gcf, 'CurrentAxes', hPSD(s));
                 yline(0,'--k','LineWidth',2);
             end
         end
@@ -312,21 +379,39 @@ for s=1:numSegments
         % Violin plots for power
         for j=1:numFreqRanges
             tmpLogPower = cell(1,2);
+
+            % Process each group (meditators and controls)
             for k=1:2
+                % Calculate band power - sum across frequencies in the band
+                bandPower = squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2));
+
                 if isempty(protocolPosRef)
-                    tmpLogPower{k} = log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2)));
+                    % Absolute log power when no reference protocol
+                    tmpLogPower{k} = log10(bandPower);
                 else
-                    tmpLogPower{k} = 10*(log10(squeeze(sum(meanPSDData{k}(:,freqPosList{j}),2))) - log10(squeeze(sum(meanPSDDataRef{k}(:,freqPosList{j}),2))));
+                    % Calculate relative power using reference protocol
+                    refBandPower = squeeze(sum(meanPSDDataRef{k}(:,freqPosList{j}),2));
+                    refBandPower(refBandPower <= 0) = eps;
+
+                    % Calculate relative change (10× difference in log scale)
+                    tmpLogPower{k} = 10 * (log10(bandPower) - log10(refBandPower));
                 end
 
-                % Store data in the collection array
+                % Store data in the collection array for this segment and frequency range
                 allSegmentsPower{k}{s,j} = tmpLogPower{k};
             end
+
+            % Store band power data for return
             powerDataToReturn{i,j} = tmpLogPower;
+
+            % Create visualization if display is enabled
             if displayDataFlag
-                % display violin plots for power
+                % Set up and display violin plot
                 displaySettings.plotAxes = hPower(j,s);
-                displayViolinPlot(tmpLogPower,[{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}],1,1,1,pairedDataFlag,displaySettings);
+                displayViolinPlot(tmpLogPower, [{displaySettings.colorNames(1,:)} {displaySettings.colorNames(2,:)}], ...
+                    1, 1, 1, pairedDataFlag, displaySettings);
+
+                % Add appropriate labels
                 if i==1
                     % Add frequency info to y-label
                     ylabel(hPower(j,i),['\Delta Power (' num2str(freqRangeList{j}(1)) '-' num2str(freqRangeList{j}(2)) ' Hz)']);
@@ -338,57 +423,57 @@ for s=1:numSegments
     end
 end
 
-%%%%%%%%%%%%%%%%%  plot power data for all the segments together %%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%  plot power data for all the segments together %%%%%%%%%%
 if displayDataFlag
+    % Define color maps for Meditators and Controls
+    colorMapMed = num2cell(displaySettingsGroupMed.colorNames, 2);
+    colorMapCon = num2cell(displaySettingsGroupCon.colorNames, 2);
+
+    % Plot violin plots for each frequency range, looping through groups
     for j=1:numFreqRanges
-        combinedDataMed = allSegmentsPower{1}(:,j)';
-        combinedDataCon = allSegmentsPower{2}(:,j)';
-        % Plot meditators
-        displaySettings.plotAxes = hPower(j,4);
-        displaySettings.xTickLabels = segmentList;
-        displaySettings.parametricTest = 1;
-        displaySettings.compareRefFlag = compareRefFlag;
-        displaySettings.refIndex = refSubsegmentIndex;
-        displayViolinPlot(combinedDataMed, [{[0.8 0 0]} {[0.5 0 0]} {[0.2 0 0]}], ...
-            1, 1, 1, 1, displaySettings);
-        % Plot controls
-        displaySettings.plotAxes = hPower(j,5);
-        displayViolinPlot(combinedDataCon, {[0 0 0.8], [0 0 0.5], [0 0 0.2]}, ...
-            1, 1, 1, 1, displaySettings);
-        if j==1
-            title(hPower(j,4),'Meditators');
-            title(hPower(j,5),'Controls');
+        for g=1:2
+            if g==1
+                groupData = allSegmentsPower{1}(:,j)';
+                colorMap  = colorMapMed;
+                axisIndex = 4;
+                groupName = 'Meditators';
+            else
+                groupData = allSegmentsPower{2}(:,j)';
+                colorMap  = colorMapCon;
+                axisIndex = 5;
+                groupName = 'Controls';
+            end
+
+            displaySettings.plotAxes = hPower(j,axisIndex);
+            displayViolinPlot(groupData, colorMap, 1, 1, 1, 1, displaySettings);
+            if j==1, title(hPower(j,axisIndex),groupName); end
         end
     end
 
-    % Plot meditator's PSDs in column 4
-    axes(hPSD(4));
-    displaySettingsGroupMed = displaySettings;
-    displaySettingsGroupMed.colorNames = [0.8  0   0;   0.5 0  0;    0.2  0    0];     % Light to dark red shades
-    displayAndcompareData(hPSD(4),allSegmentsPSD(1,:),freqVals,displaySettingsGroupMed,yLimsPSD,1,useMedianFlag,~pairedDataFlag,compareRefFlag,refSubsegmentIndex);
-    title('Meditators - All Segments');
-    xlim(freqLims);
-    ylim(yLimsPSD);
-    if ~isempty(protocolPosRef)
-        yline(0,'--k','LineWidth',2);
-    end
+    % Prepare arrays for PSD plots of meditators and controls
+    groupData      = {allSegmentsPSD(1,:), allSegmentsPSD(2,:)};
+    groupColors    = {cat(1, colorMapMed{:}), cat(1, colorMapCon{:})};
+    groupTitles    = {'Meditators - All Segments','Controls - All Segments'};
+    groupAxes      = [hPSD(4) hPSD(5)];
 
-    % Plot control's PSDs in column 5
-    axes(hPSD(5));
-    cla;
-    displaySettingsGroupCon = displaySettings;
-    displaySettingsGroupCon.colorNames = [0 0 0.8 ; 0 0 0.5 ; 0 0 0.2];
-    displayAndcompareData(hPSD(5),allSegmentsPSD(2,:),freqVals,displaySettingsGroupCon,yLimsPSD,1,useMedianFlag,~pairedDataFlag,compareRefFlag,refSubsegmentIndex);
-    title('Controls - All Segments');
-    xlim(freqLims);
-    ylim(yLimsPSD);
-    if ~isempty(protocolPosRef)
-        yline(0,'--k','LineWidth',2);
+    % Loop through groups for PSD plots
+    for g=1:2
+        set(gcf, 'CurrentAxes', groupAxes(g));
+        displaySettingsGroup       = displaySettings;
+        displaySettingsGroup.colorNames = groupColors{g};
+
+        displayAndcompareData(groupAxes(g), groupData{g}, freqVals, ...
+            displaySettingsGroup, yLimsPSD, 1, useMedianFlag, ...
+            ~pairedDataFlag, compareRefFlag, refSubsegmentIndex);
+
+        title(groupTitles{g});
+        xlim(freqLims); ylim(yLimsPSD);
+        if ~isempty(protocolPosRef), yline(0,'--k','LineWidth',2); end
     end
 end
 end  % main function end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Helper Functions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function goodSubjectNameLists = getGoodSubjectNameList(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,pairedDataFlag,saveFolderName,baseFolderName,timeCuttOff,protcolToCheckIndex,isRefFromMainProtocol)
 
 % For unpaired case, subjects can be rejected if either data in analysis or
@@ -474,6 +559,8 @@ else
     end
 end
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%% getPowerDataAllSubjects %%%%%%%%%%%%%%%%%%%%%%%%%
 function [powerData,powerDataRef,freqVals] = getPowerDataAllSubjects(subjectNameLists,badEyeCondition,badTrialVersion,stRange,protocolPos,protocolPosRef,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials,saveFolderName,baseFolderName,isRefFromMainProtocol)
 
 powerData = cell(1,2);
@@ -508,6 +595,8 @@ for i=1:2
     powerDataRef{i} = powerDataRefTMP;
 end
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%% getPowerData %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function tmpPower = getPowerData(tmpData,protocolPos,analysisChoice,badElectrodeRejectionFlag,cutoffNumTrials)
 
 numTrials = tmpData.numTrials(protocolPos);
@@ -526,6 +615,8 @@ else
     tmpPower(badElectrodes,:) = NaN;
 end
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%% getBadElectrodes %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function badElectrodes = getBadElectrodes(badElectrodeList,badElectrodeRejectionFlag,protocolPos)
 
 if badElectrodeRejectionFlag==1 % Bad electrodes for the protocol

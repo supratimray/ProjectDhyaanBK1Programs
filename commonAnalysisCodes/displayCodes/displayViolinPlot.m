@@ -4,6 +4,9 @@ function ax=displayViolinPlot(dataArray,colorArray,showData,plotCentralTendency,
 % The code is adapted from the original source, "https://github.com/bastibe/Violinplot-Matlab"
 % To know about the violinplot please refer to "stat.cmu.edu/~rnugent/PCMI2016/papers/ViolinPlots.pdf"
 
+% Parametric testing is now enabled by default.
+% Improved spacing for displaying p-values in ANOVA.
+
 if ~exist('plotCentralTendency','var');           plotCentralTendency=0;                          end
 if ~exist('displaySettings','var');               displaySettings=struct();                       end
 if ~isfield(displaySettings,'alpha');             displaySettings.alpha=0.3;                      end
@@ -18,7 +21,7 @@ if ~isfield(displaySettings,'setYLim');           displaySettings.setYLim=[-7 7]
 if ~isfield(displaySettings,'commonYLim');        displaySettings.commonYLim=0;                   end
 if ~isfield(displaySettings,'showXTicks');        displaySettings.showXTicks=1;                   end
 if ~isfield(displaySettings,'xTickLabels');       displaySettings.xTickLabels=[{'Med'},{'Con'},{'Ref'}];  end
-if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=0;               end
+if ~isfield(displaySettings,'parametricTest');    displaySettings.parametricTest=1;               end
 if ~isfield(displaySettings,'tickLengthMedium');  displaySettings.tickLengthMedium=[0.025 0];     end
 if ~isfield(displaySettings,'plotQuartiles');     displaySettings.plotQuartiles=0;                end
 if ~isfield(displaySettings,'BoxWidth');          displaySettings.BoxWidth=0.005;                 end
@@ -213,11 +216,11 @@ if showSignificance
     % Show significance text
     if numGroups > 2
         % Calculate spacing for significance markers with larger gaps
-        ySpacing = yPositionLine * 1.25; 
-        baseYPos = commonMax + yPositionLine * 1.5; 
+        ySpacing = yPositionLine;
+        baseYPos = commonMax + yPositionLine;
 
         % Show ANOVA result at the top with extra spacing
-        text(mean(xPos), baseYPos + 2*ySpacing, ...
+        text(mean(xPos), baseYPos, ...
             ['ANOVA: ' getSignificanceString(p_anova)], ...
             'FontSize', textFontSize, ...
             'FontWeight', 'bold', ...
