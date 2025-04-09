@@ -41,9 +41,10 @@ analysisChoiceList2 = [{'bl'} {'st'} {'combined'}];
 hAnalysisChoice = uicontrol('Parent',hPanel2,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 1/3 0.5 1/3],'Style','popup','String',analysisChoiceList1,'FontSize',fontSizeSmall);
 
 % RefChoice
-refElectrodeList{1} = [14 44 47]; refElectrodeListName{1} = 'LeftOccipital';
-refElectrodeList{2} = [19 49 52]; refElectrodeListName{2} = 'RightOccipital';
-refElectrodeList{3} = [16 17 18 48]; refElectrodeListName{3} = 'BackOccipital';
+refElectrodeList{1} = [17 18 48 16]; refElectrodeListName{1} = 'BackOccipital';
+refElectrodeList{2} = [14 44 47]; refElectrodeListName{2} = 'LeftOccipital';
+refElectrodeList{3} = [19 49 52]; refElectrodeListName{3} = 'RightOccipital';
+refElectrodeList{4} = [2   32+[2 3 30 4 31]]; refElectrodeListName{4} = 'Frontal';
 
 uicontrol('Parent',hPanel2,'Unit','Normalized','Position',[0 0 0.5 1/3],'Style','text','String','Ref Elecs','FontSize',fontSizeSmall);
 hRefChoice = uicontrol('Parent',hPanel2,'Unit','Normalized','BackgroundColor', backgroundColor, 'Position', [0.5 0 0.5 1/3],'Style','popup','String',refElectrodeListName,'FontSize',fontSizeSmall);
@@ -69,8 +70,8 @@ hBadTrialVersion = uicontrol('Parent',hPanel3,'Unit','Normalized','BackgroundCol
 %%%%%%%%%%%%%%%%%%%%%%%%% Freq Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel4 = uipanel('Title','Freq Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.475 1-panelHeight 0.15 panelHeight]);
 freqRangeList0{1} = [7 10];
-freqRangeList0{2} = [16 28];
-freqRangeList0{3} = [60 98];
+freqRangeList0{2} = [20 32];
+freqRangeList0{3} = [60 96];
 
 numFreqRanges = length(freqRangeList0);
 hFreqRangeMin = cell(1,numFreqRanges);
@@ -86,7 +87,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Axis Ranges %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hPanel5 = uipanel('Title','Axis Ranges','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.625 1-panelHeight 0.15 panelHeight]);
-axisRangeList0{1} = [0 100]; axisRangeName{1} = 'Freq Lims (Hz)';
+axisRangeList0{1} = [0 97]; axisRangeName{1} = 'Freq Lims (Hz)';
 axisRangeList0{2} = [0 1]; axisRangeName{2} = 'YLims';
 axisRangeList0{3} = [0 1]; axisRangeName{3} = 'cLims (topo)';
 
@@ -103,34 +104,36 @@ for i=1:numAxisRanges
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Cutoff Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hPanel6 = uipanel('Title','Cutoffs','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.775 1-panelHeight 0.1 panelHeight]);
+hPanel6 = uipanel('Title','Cutoffs','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.775 1-panelHeight 0.08 panelHeight]);
 cutoffList0 = [2 30]; cutoffNames = [{'Num Elecs'} {'Num Trials'}];
 
 numCutoffRanges = length(cutoffList0);
 hCutoffs = cell(1,numCutoffRanges);
 
 for i=1:numCutoffRanges
-    uicontrol('Parent',hPanel6,'Unit','Normalized','Position',[0 1-i/numCutoffRanges 0.5 1/numCutoffRanges],'Style','text','String',cutoffNames{i},'FontSize',fontSizeSmall);
-    hCutoffs{i} = uicontrol('Parent',hPanel6,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.5 1-i/numCutoffRanges 0.5 1/numCutoffRanges], ...
+    uicontrol('Parent',hPanel6,'Unit','Normalized','Position',[0 1-i/numCutoffRanges 0.55 1/numCutoffRanges],'Style','text','String',cutoffNames{i},'FontSize',fontSizeSmall);
+    hCutoffs{i} = uicontrol('Parent',hPanel6,'Unit','Normalized','BackgroundColor', backgroundColor,'Position',[0.6 1-i/numCutoffRanges 0.4 1/numCutoffRanges], ...
         'Style','edit','String',num2str(cutoffList0(i)),'FontSize',fontSizeSmall);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%% Plot Choices %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-hPanel7 = uipanel('Title','Plot','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.875 1-panelHeight 0.1 panelHeight]);
+hPanel7 = uipanel('Title','Plot','fontSize',fontSizeLarge,'Unit','Normalized','Position',[0.85 1-panelHeight 0.14 panelHeight]);
 
-hUseMedianFlag = uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 2/3 1 1/3],'Style','togglebutton','String','Use Median','FontSize',fontSizeMedium);
+hUseMedianFlag = uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 2/3 1 1/3],'Style','togglebutton','String','UseMedian','FontSize',fontSizeMedium);
 uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 1/3 0.5 1/3],'Style','pushbutton','String','Rescale','FontSize',fontSizeMedium,'Callback',{@rescale_Callback});
 uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0.5 1/3 0.5 1/3],'Style','pushbutton','String','Clear','FontSize',fontSizeMedium,'Callback',{@cla_Callback});
-uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 0 1 1/3],'Style','pushbutton','String','plot','FontSize',fontSizeMedium,'Callback',{@plot_Callback});
+hOmitFreqFlag = uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0 0 0.7 1/3],'Style','togglebutton','String','RemoveLineNoise','FontSize',fontSizeMedium);
+uicontrol('Parent',hPanel7,'Unit','Normalized','Position',[0.7 0 0.3 1/3],'Style','pushbutton','String','Plot','FontSize',fontSizeMedium,'Callback',{@plot_Callback});
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 electrodeGroupList = getElectrodeGroupsConn(groupType,1,'actiCap64_UOL');
 numGroups = length(electrodeGroupList);
-hAllPlots.hConn1 = getPlotHandles(1,numGroups,[0.05 0.55 0.6 0.3],0.01,0.01,1);
-hAllPlots.hConn2 = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.6 0.45],0.01,0.01,0);
-hAllPlots.hTopoRef = getPlotHandles(1,2,[0.66 0.55 0.32 0.3],0.002,0.002,1);
-hAllPlots.hTopo  = getPlotHandles(numFreqRanges,2,[0.66 0.05 0.2 0.45],0,0,1);
-hAllPlots.hConn3 = getPlotHandles(numFreqRanges,1,[0.88 0.05 0.1 0.45],0.01,0.01,1);
+hAllPlots.hConn1 = getPlotHandles(1,numGroups,[0.05 0.53 0.5 0.3],0.01,0.01,1);
+hAllPlots.hConn2 = getPlotHandles(numFreqRanges,numGroups,[0.05 0.05 0.5 0.4],0.01,0.01,1);
+hAllPlots.hTopoRef = getPlotHandles(1,2,[0.62 0.55 0.37 0.3],0.002,0.002,1);
+hAllPlots.hTopo  = getPlotHandles(numFreqRanges,3,[0.56 0.05 0.3 0.4],0.005,0.01,1);
+hAllPlots.hConn3 = getPlotHandles(numFreqRanges,1,[0.89 0.053 0.1 0.4],0.01,0.01,1);
 
 connMethod = 'ppc';
 
@@ -204,8 +207,9 @@ connMethod = 'ppc';
         end
 
         useMedianFlag = get(hUseMedianFlag,'val');
+        omitFreqFlag = get(hOmitFreqFlag,'val'); % to remove line noise
 
-        displayConnDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,freqRangeList,axisRangeList,cutoffList,useMedianFlag,hAllPlots,pairedDataFlag,1);
+        displayConnDataAllSubjects(subjectNameLists,protocolName,analysisChoice,refElectrodes,groupType,connMethod,badEyeCondition,badTrialVersion,freqRangeList,axisRangeList,cutoffList,useMedianFlag,omitFreqFlag,hAllPlots,pairedDataFlag,1);
 
     end
     function cla_Callback(~,~)

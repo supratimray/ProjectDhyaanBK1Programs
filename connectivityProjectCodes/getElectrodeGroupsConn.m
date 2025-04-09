@@ -20,7 +20,7 @@ end
 function [electrodeGroupList,groupNameList,binnedCenters] = getElectrodeGroupsConnRelative(refElectrodes,montageChanlocs)
 
 %%%%% Discretize connectivty into bins depending on distance from seed %%%%
-binWidth = 0.25;
+binWidth = 2/6; % to get 6 electrode groups b/w cos theta [-1 1]
 binEdges = -1:binWidth:1;
 nbins = length(binEdges)-1;
 binnedCenters = binEdges(1:end-1)+(binWidth/2);
@@ -38,7 +38,7 @@ for e=1:numElectrodes
     for b = 1:nbins % number of bins
         electrodeGroupList{e,nbins-b+1} = find(binned_fitx == b);
         if e==1
-            groupNameList{nbins-b+1} = [num2str(binEdges(b)) '<x<' num2str(binEdges(b+1))];
+            groupNameList{nbins-b+1} = [num2str(round(binEdges(b),2)) '< cos\theta <' num2str(round(binEdges(b+1),2))];
         end
     end
 end
@@ -57,9 +57,9 @@ end
 function out_theta = angl_dist(in_theta_ref,in_theta,val)
 if(strcmp(val,'a')) % azimuth (addressing Cz issue)
     if(in_theta_ref > 90)
-    in_theta(14) = 90;
+    in_theta(24) = 90;
     elseif(in_theta_ref < -90)
-        in_theta(14) = -90;
+        in_theta(24) = -90;
     end
 end
 in_theta = abs(in_theta-in_theta_ref);
@@ -72,6 +72,6 @@ for i=1:length(in_theta)
     end
 end
 if(strcmp(val,'a')) % azimuth (addressing Cz issue)
-    out_theta(14) = 0;
+    out_theta(24) = 0;
 end
 end
