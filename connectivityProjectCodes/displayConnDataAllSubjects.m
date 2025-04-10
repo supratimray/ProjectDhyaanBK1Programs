@@ -243,6 +243,8 @@ for i=1:2
 
         if numGoodTrials<cutoffList(2)
             badSubjectList{i}(j) = 1;
+            connDataTMP{i}{j} = [];
+            connDataElectrodeGroupTMP{i}{j} = [];
         else
             if strcmp(analysisChoice,'bl')
                 connDataTMP2 = tmpData.connPre(refElectrodes,:,:);
@@ -274,6 +276,8 @@ for i=1:2
                 connDataElectrodeGroupTMP{i}{j} = squeeze(mean(connDataElectrodeGroupTMP2,1,'omitnan'));
             else
                 badSubjectList{i}(j) = 1;
+                connDataTMP{i}{j} = [];
+                connDataElectrodeGroupTMP{i}{j} = [];
             end
         end
     end
@@ -287,6 +291,7 @@ else
         badSubjectList{b}= find(badSubjectList{b});
     end
 end
+
 % Remove bad subjects
 connData = cell(1,3);
 connDataElectrodeGroup = cell(1,3);
@@ -295,7 +300,6 @@ for i=1:2
     x1 = connDataTMP{i};
     x2 = connDataElectrodeGroupTMP{i};
     badSubjectPos = badSubjectList{i};
-    badSubjectPos = badSubjectPos(badSubjectPos<=length(connDataTMP{i})); % because sometimes the data of terminal subject might be ubsent in connDataTMP itself.
     x1(badSubjectPos)=[];
     x2(badSubjectPos)=[];
 
